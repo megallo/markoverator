@@ -50,18 +50,12 @@ public class MarkovGenerator {
     public static void main(String[] args) throws IOException {
         MarkovGenerator mg = new MarkovGenerator();
         Bigrammer bigrams = new Bigrammer();
+        // TODO sample sentence file in project
         bigrams.buildModel(mg.readAndCleanFile(args[0]));
         loggie.info(bigrams.generateRandom());
         loggie.info(bigrams.generateRandom());
-        loggie.info(bigrams.generateRandom());
-        loggie.info(bigrams.generateRandom());
-        loggie.info(bigrams.generateRandom());
-        loggie.info(bigrams.generateRandom());
-        loggie.info(bigrams.generateRandom());
-        loggie.info(bigrams.generateRandom());
-        loggie.info(bigrams.generateRandom());
-        loggie.info(bigrams.generateRandom());
-
+        loggie.info(bigrams.generateRandom("allergies"));
+        loggie.info(bigrams.generateRandom("potato"));
     }
 
     private List<List<String>> readAndCleanFile(String filename) throws IOException {

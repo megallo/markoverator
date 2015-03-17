@@ -19,6 +19,7 @@ package com.github.megallo.markoverator;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Stack;
 
@@ -29,11 +30,12 @@ public class Bigrammer {
 
     private Random random = new Random();
 
-    private final static int MAX_HALF_LENGTH = 8; // todo configurable
-    private final static String BOM = "<BOM>"; // todo since these are always together they could just be one delimiter, derp
+    private final static int MAX_HALF_LENGTH = 8; // TODO configurable
+    private final static String BOM = "<BOM>"; // TODO since these are always together they could just be one delimiter, derp
     private final static String EOM = "<EOM>";
 
     private List<String> fullWordList;
+    private Map<String, List<Integer>> wordIndexMap;
     private HashMap<Pair, List<String>> forwardCache = new HashMap<>();
     private HashMap<Pair, List<String>> backwardCache = new HashMap<>();
 
@@ -45,6 +47,25 @@ public class Bigrammer {
             // keep trying until we get a reasonable starting point
         } while (fullWordList.get(seed).equals(EOM) || fullWordList.get(seed).equals(BOM)
                 || fullWordList.get(seed+1).equals(EOM) || fullWordList.get(seed+1).equals(BOM));
+
+        return generateRandom(seed);
+    }
+
+    public String generateRandom(String seedWord) {
+        List<Integer> allPossibleLocations;
+        if (wordIndexMap.containsKey(seedWord)) {
+            allPossibleLocations = wordIndexMap.get(seedWord);
+            return generateRandom(allPossibleLocations.get(random.nextInt(allPossibleLocations.size())));
+            // TODO hack something in here to force removal of EOM/BOM tags? haaaax
+        }
+
+        // TODO stemming or wordnet to try harder at finding the word
+
+        // we couldn't find that word, so I guess second best is to return *something*
+        return generateRandom();
+    }
+
+    public String generateRandom(int seed) {
 
         String w1 = fullWordList.get(seed);
         String w2 = fullWordList.get(seed+1);
@@ -107,6 +128,7 @@ public class Bigrammer {
     public void buildModel(List<List<String>> sentencesList) {
 
         fullWordList = new ArrayList<>();
+        wordIndexMap = new HashMap<>();
 
         // add BOM and EOM to get more natural sentence starts and ends
         for (List<String> oneSentence : sentencesList) {
@@ -136,6 +158,16 @@ public class Bigrammer {
                 backwardCache.put(backwardPair, new ArrayList<String>());
             }
             backwardCache.get(backwardPair).add(w1);
+        }
+
+        // make a list of the indices at which a given word appears
+        for (int i = 0; i < fullWordList.size(); i++) {
+            String word = fullWordList.get(i);
+            if (!wordIndexMap.containsKey(word)) {
+                wordIndexMap.put(word, new ArrayList<Integer>());
+            }
+            wordIndexMap.get(word).add(i);
+            // BOM and EOM could be removed here if space is a concern
         }
     }
 

@@ -98,7 +98,7 @@ public class TextUtils {
         while (it.hasNext()) {
             String word = it.next();
             // smilies are a-ok
-            if (word.equals(":)") || word.equals("(:")) {
+            if (word.equals(":)") || word.equals("(:")) { // TODO see if ;) is causing the blank words
                 continue;
             }
             if (word.startsWith("(") && !word.endsWith(")")) {

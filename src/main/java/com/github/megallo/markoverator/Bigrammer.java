@@ -16,6 +16,7 @@
 
 package com.github.megallo.markoverator;
 
+import com.google.common.collect.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,8 +39,7 @@ public class Bigrammer {
     private Random random = new Random();
 
     private final static int MAX_HALF_LENGTH = 8; // TODO configurable
-    private final static String BOM = "<BOM>"; // TODO since these are always together they could just be one delimiter, derp
-    private final static String EOM = "<EOM>";
+    private final static String DELIM = "<DELIM>";
 
     private List<String> fullWordList;
     private Map<String, List<Integer>> wordIndexMap;
@@ -53,8 +53,9 @@ public class Bigrammer {
         do {
             seed = random.nextInt(fullWordList.size() - 3);
             // keep trying until we get a reasonable starting point
-        } while (fullWordList.get(seed).equals(EOM) || fullWordList.get(seed).equals(BOM)
-                || fullWordList.get(seed+1).equals(EOM) || fullWordList.get(seed-1).equals(BOM));
+        } while (fullWordList.get(seed).equals(DELIM) || fullWordList.get(seed).equals(DELIM));
+                // TODO this addition will prevent one-word responses; do I want that?
+                // || fullWordList.get(seed+1).equals(EOM) || fullWordList.get(seed-1).equals(BOM));
 
         return generateRandom(seed);
     }
@@ -64,7 +65,6 @@ public class Bigrammer {
         if (wordIndexMap.containsKey(seedWord)) {
             allPossibleLocations = wordIndexMap.get(seedWord);
             return generateRandom(allPossibleLocations.get(random.nextInt(allPossibleLocations.size())));
-            // TODO hack something in here to force removal of EOM/BOM tags? haaaax
         }
 
         // TODO stemming or wordnet to try harder at finding the word
@@ -78,9 +78,10 @@ public class Bigrammer {
         String w1 = fullWordList.get(seed);
         String w2 = fullWordList.get(seed+1);
 
-        List<String> backwardText = generateBackwardText(w1, w2); // does not include seed words
-        List<String> forwardText = generateForwardText(w1, w2);   // includes seed words
-        backwardText.addAll(forwardText);                         // and mush
+        List<String> backwardText = generateBackwardText(w1, w2); // does not include seed word
+        List<String> forwardText = generateForwardText(w1, w2);   // includes seed word
+        backwardText.addAll(forwardText);                         // and mush 'em together
+        backwardText.removeAll(Lists.newArrayList(DELIM));
 
         StringBuilder sb = new StringBuilder();
         for (String word : backwardText) {
@@ -91,29 +92,30 @@ public class Bigrammer {
     }
 
     private List<String> generateForwardText(String word1, String word2) {
-        List<String> generated = new ArrayList<>();
-        while (generated.size() <= MAX_HALF_LENGTH) {
-            generated.add(word1);
-            List<String> nextWordOptions = forwardCache.get(new Pair(word1, word2));
-            String word3 = nextWordOptions.get(random.nextInt(nextWordOptions.size()));
+        List<String> generated = Lists.newArrayList(word1, word2);
 
-            // TODO end based on POS tag - make a method that checks end condition
-            if (word3.equals(EOM)) {
+        // loops until we reach a size we like, or the content reaches a good stopping point
+        while (generated.size() <= MAX_HALF_LENGTH) {
+
+            List<String> nextWordOptions = forwardCache.get(new Pair(word1, word2));
+            // choose a random possible next word based on the two given ones
+            String nextWord = nextWordOptions.get(random.nextInt(nextWordOptions.size()));
+
+            // if the next word is the end, don't even bother adding it
+            if (nextWord.equals(DELIM)) {
                 break;
             }
 
-            // I need a look-ahead. where can this go so that it has the next word in it?
-            // we're going to add it outside of the loop when we stop
-            // figure out how to not do that
-            if ((generated.size() > MAX_HALF_LENGTH/2 && isDecentEnding(generated))) {
+            generated.add(nextWord);
+
+            if (checkEndCondition(generated)) { // do we like it?
                 break;
             }
 
             word1 = word2;
-            word2 = word3;
+            word2 = nextWord;
 
         }
-        generated.add(word2);
 
         return generated;
     }
@@ -125,7 +127,7 @@ public class Bigrammer {
             List<String> prevWordOptions = backwardCache.get(new Pair(word2, word3));
             String word1 = prevWordOptions.get(random.nextInt(prevWordOptions.size()));
             // TODO end based on POS tag - make a method that checks end condition
-            if (word1.equals(BOM)) {
+            if (word1.equals(DELIM)) {
                 break;
             }
             word3 = word2;
@@ -153,12 +155,12 @@ public class Bigrammer {
         fullWordList = new ArrayList<>();
         wordIndexMap = new HashMap<>();
 
-        // add BOM and EOM to get more natural sentence starts and ends
+        // add sentence delimiters to get more natural sentence starts and ends
         for (List<String> oneSentence : sentencesList) {
-            fullWordList.add(BOM);
+            fullWordList.add(DELIM);
             fullWordList.addAll(oneSentence);
-            fullWordList.add(EOM);
         }
+        fullWordList.add(DELIM); // don't forget the one at the end
 
         // for each triplet
         //   map of (<w1, w2> -> w3) = generates forward text
@@ -190,16 +192,41 @@ public class Bigrammer {
                 wordIndexMap.put(word, new ArrayList<Integer>());
             }
             wordIndexMap.get(word).add(i);
-            // BOM and EOM could be removed here if space is a concern
+            // DELIM could be removed here if space is a concern
         }
     }
 
-    private boolean isDecentEnding(List<String> words) {
+    /**
+     * Return true if this should be the end of the sentence.
+     * @param words a sentence
+     */
+    private boolean checkEndCondition(List<String> words) {
+        // check length
+        if (words.size() > MAX_HALF_LENGTH) {
+            return true;
+        }
 
+        // starting partway through, figure out a good word to end on
+        if ((words.size() > MAX_HALF_LENGTH/2 && isDecentEndingWord(words))) {
+            return true;
+        }
+
+        // not ready yet, keep going
+        return false;
+    }
+
+    private boolean isDecentEndingWord(List<String> sentence) {
         // right now just checks to see if it's an adverb
-        List<String> tags = posUtil.tagSentence(words);
-        if (tags.get(tags.size()-1).equals("RB")) {
-            loggie.info("Succeeding at adverb: word is {}", words.get(words.size()-1));
+        List<String> tags = posUtil.tagSentence(sentence);
+
+        String endTag = tags.get(tags.size() - 1);
+        if (endTag.equals("RB")) {
+            loggie.info("Succeeding at adverb: word is {}", sentence.get(sentence.size()-1));
+            return true;
+        }
+        // this is duplicated for debugging only
+        if (endTag.equals("NP") || endTag.equals("NNP")) {
+            loggie.info("Succeeding at noun: word is {}", sentence.get(sentence.size()-1));
             return true;
         }
         return false;

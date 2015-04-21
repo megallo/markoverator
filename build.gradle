@@ -81,6 +81,8 @@ repositories {
 }
 
 dependencies {
+    compile 'com.github.rholder.nlp:fast-tag-core:0.1.0'
+    compile 'com.github.rholder.nlp:fast-tag-lexicon:0.1.0'
     compile "org.slf4j:slf4j-simple:1.7.5"
     // junit testing
     testCompile "junit:junit:4.11"

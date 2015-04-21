@@ -16,6 +16,9 @@
 
 package com.github.megallo.markoverator;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -25,8 +28,12 @@ import java.util.Stack;
 
 /**
  * Build a bigram markov model out of sentences for random text generation
+ *
+ * Build the model before attempting to generate text.
  */
 public class Bigrammer {
+
+    private static final Logger loggie = LoggerFactory.getLogger(Bigrammer.class);
 
     private Random random = new Random();
 
@@ -39,6 +46,7 @@ public class Bigrammer {
     private HashMap<Pair, List<String>> forwardCache = new HashMap<>();
     private HashMap<Pair, List<String>> backwardCache = new HashMap<>();
 
+    private PartOfSpeechUtils posUtil = new PartOfSpeechUtils();
 
     public String generateRandom() {
         int seed;
@@ -46,7 +54,7 @@ public class Bigrammer {
             seed = random.nextInt(fullWordList.size() - 3);
             // keep trying until we get a reasonable starting point
         } while (fullWordList.get(seed).equals(EOM) || fullWordList.get(seed).equals(BOM)
-                || fullWordList.get(seed+1).equals(EOM) || fullWordList.get(seed+1).equals(BOM));
+                || fullWordList.get(seed+1).equals(EOM) || fullWordList.get(seed-1).equals(BOM));
 
         return generateRandom(seed);
     }
@@ -65,7 +73,7 @@ public class Bigrammer {
         return generateRandom();
     }
 
-    public String generateRandom(int seed) {
+    private String generateRandom(int seed) {
 
         String w1 = fullWordList.get(seed);
         String w2 = fullWordList.get(seed+1);
@@ -88,12 +96,22 @@ public class Bigrammer {
             generated.add(word1);
             List<String> nextWordOptions = forwardCache.get(new Pair(word1, word2));
             String word3 = nextWordOptions.get(random.nextInt(nextWordOptions.size()));
+
             // TODO end based on POS tag - make a method that checks end condition
             if (word3.equals(EOM)) {
                 break;
             }
+
+            // I need a look-ahead. where can this go so that it has the next word in it?
+            // we're going to add it outside of the loop when we stop
+            // figure out how to not do that
+            if ((generated.size() > MAX_HALF_LENGTH/2 && isDecentEnding(generated))) {
+                break;
+            }
+
             word1 = word2;
             word2 = word3;
+
         }
         generated.add(word2);
 
@@ -125,6 +143,11 @@ public class Bigrammer {
         return forwardList;
     }
 
+    /**
+     * Call me first!
+     * Initialize this object with a model based on the provided sentences.
+     * @param sentencesList a list of sentences: each sentence is pre-tokenized, usually into words
+     */
     public void buildModel(List<List<String>> sentencesList) {
 
         fullWordList = new ArrayList<>();
@@ -137,9 +160,9 @@ public class Bigrammer {
             fullWordList.add(EOM);
         }
 
-        //for each triplet
-        // map of (<w1, w2> -> w3) = generates forward text
-        // map of (<w2, w3> -> w1) = generates backward text
+        // for each triplet
+        //   map of (<w1, w2> -> w3) = generates forward text
+        //   map of (<w2, w3> -> w1) = generates backward text
 
         for (int i = 0; i < fullWordList.size() - 2; i++) {
             String w1 = fullWordList.get(i);
@@ -171,7 +194,18 @@ public class Bigrammer {
         }
     }
 
-    class Pair {
+    private boolean isDecentEnding(List<String> words) {
+
+        // right now just checks to see if it's an adverb
+        List<String> tags = posUtil.tagSentence(words);
+        if (tags.get(tags.size()-1).equals("RB")) {
+            loggie.info("Succeeding at adverb: word is {}", words.get(words.size()-1));
+            return true;
+        }
+        return false;
+    }
+
+    private class Pair {
         String first;
         String second;
 

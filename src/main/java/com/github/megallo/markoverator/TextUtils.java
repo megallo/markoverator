@@ -89,6 +89,8 @@ public class TextUtils {
         return sentence;
     }
 
+
+    // TODO still finding words ending in ) - e.g. "whatever)"
     /**
      * Remove unmatched parentheses stuck to words, but leave HipChat emoticons (mindblown)
      * and smiley faces :) :( (: ):

@@ -82,7 +82,7 @@ public class MarkovGenerator {
     }
 
     private List<String> cleanUpLine(String sentence) {
-        String[] split = sentence.toLowerCase().split("\\s+"); //lowercase, break on whitespace
+        String[] split = sentence.split("\\s+"); // break on whitespace
         List<String> splitSentence = new LinkedList<>(Arrays.asList(split));
         splitSentence = removeUrls(splitSentence);
         splitSentence = removeMentions(splitSentence);

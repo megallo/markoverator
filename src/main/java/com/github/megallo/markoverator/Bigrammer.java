@@ -166,6 +166,8 @@ public class Bigrammer {
         //   map of (<w1, w2> -> w3) = generates forward text
         //   map of (<w2, w3> -> w1) = generates backward text
 
+        // TODO try out only adding a word if it's not in the list yet
+        // makes it less natural statistically but probably adds more fun randomness
         for (int i = 0; i < fullWordList.size() - 2; i++) {
             String w1 = fullWordList.get(i);
             String w2 = fullWordList.get(i+1);
@@ -248,16 +250,16 @@ public class Bigrammer {
 
             Pair pair = (Pair) o;
 
-            if (!first.equals(pair.first)) return false;
-            if (!second.equals(pair.second)) return false;
+            if (!first.toLowerCase().equals(pair.first.toLowerCase())) return false;
+            if (!second.toLowerCase().equals(pair.second.toLowerCase())) return false;
 
             return true;
         }
 
         @Override
         public int hashCode() {
-            int result = first.hashCode();
-            result = 31 * result + second.hashCode();
+            int result = first.toLowerCase().hashCode();
+            result = 31 * result + second.toLowerCase().hashCode();
             return result;
         }
     }

@@ -81,6 +81,7 @@ repositories {
 }
 
 dependencies {
+    compile 'com.esotericsoftware.kryo:kryo:2.24.0'
     compile 'com.github.rholder.nlp:fast-tag-core:0.1.0'
     compile 'com.github.rholder.nlp:fast-tag-lexicon:0.1.0'
     compile 'com.google.guava:guava:18.0'

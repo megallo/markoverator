@@ -16,6 +16,7 @@
 
 package com.github.megallo.markoverator;
 
+import com.github.megallo.markoverator.utils.TextUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;

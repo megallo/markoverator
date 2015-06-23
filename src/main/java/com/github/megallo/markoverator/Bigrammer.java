@@ -16,10 +16,19 @@
 
 package com.github.megallo.markoverator;
 
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.io.Input;
+import com.esotericsoftware.kryo.io.Output;
+import com.github.megallo.markoverator.utils.BigramModel;
+import com.github.megallo.markoverator.utils.Pair;
+import com.github.megallo.markoverator.utils.PartOfSpeechUtils;
 import com.google.common.collect.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -30,7 +39,7 @@ import java.util.Stack;
 /**
  * Build a bigram markov model out of sentences for random text generation
  *
- * Build the model before attempting to generate text.
+ * Build or load the model before attempting to generate text.
  */
 public class Bigrammer {
 
@@ -41,26 +50,32 @@ public class Bigrammer {
     private final static int MAX_HALF_LENGTH = 8; // TODO configurable
     private final static String DELIM = "<DELIM>";
 
-    private List<String> fullWordList;
-    private Map<String, List<Integer>> wordIndexMap;
-    private HashMap<Pair, List<String>> forwardCache = new HashMap<>();
-    private HashMap<Pair, List<String>> backwardCache = new HashMap<>();
+    private BigramModel model = null;
+    private Map<String, List<Integer>> wordIndexMap; // calculated, so not part of the model object
 
     private PartOfSpeechUtils posUtil = new PartOfSpeechUtils();
 
     public String generateRandom() {
+        if (model == null) {
+            throw new RuntimeException("No model generated or loaded");
+        }
+
         int seed;
         do {
-            seed = random.nextInt(fullWordList.size() - 3);
+            seed = random.nextInt(model.getFullWordList().size() - 3);
             // keep trying until we get a reasonable starting point
-        } while (fullWordList.get(seed).equals(DELIM) || fullWordList.get(seed).equals(DELIM));
+        } while (model.getFullWordList().get(seed).equals(DELIM) || model.getFullWordList().get(seed).equals(DELIM));
                 // TODO this addition will prevent one-word responses; do I want that?
-                // || fullWordList.get(seed+1).equals(EOM) || fullWordList.get(seed-1).equals(BOM));
+                // || model.getFullWordList().get(seed+1).equals(EOM) || model.getFullWordList().get(seed-1).equals(BOM));
 
         return generateRandom(seed);
     }
 
     public String generateRandom(String seedWord) {
+        if (model == null) {
+            throw new RuntimeException("No model generated or loaded");
+        }
+
         List<Integer> allPossibleLocations;
         if (wordIndexMap.containsKey(seedWord)) {
             allPossibleLocations = wordIndexMap.get(seedWord);
@@ -75,8 +90,8 @@ public class Bigrammer {
 
     private String generateRandom(int seed) {
 
-        String w1 = fullWordList.get(seed);
-        String w2 = fullWordList.get(seed+1);
+        String w1 = model.getFullWordList().get(seed);
+        String w2 = model.getFullWordList().get(seed + 1);
 
         List<String> backwardText = generateBackwardText(w1, w2); // does not include seed word
         List<String> forwardText = generateForwardText(w1, w2);   // includes seed word
@@ -97,7 +112,7 @@ public class Bigrammer {
         // loops until we reach a size we like, or the content reaches a good stopping point
         while (generated.size() <= MAX_HALF_LENGTH) {
 
-            List<String> nextWordOptions = forwardCache.get(new Pair(word1, word2));
+            List<String> nextWordOptions = model.getForwardCache().get(new Pair(word1, word2));
             // choose a random possible next word based on the two given ones
             String nextWord = nextWordOptions.get(random.nextInt(nextWordOptions.size()));
 
@@ -124,7 +139,7 @@ public class Bigrammer {
         Stack<String> generated = new Stack<>();
         while (generated.size() <= MAX_HALF_LENGTH) {
             generated.push(word3);
-            List<String> prevWordOptions = backwardCache.get(new Pair(word2, word3));
+            List<String> prevWordOptions = model.getBackwardCache().get(new Pair(word2, word3));
             String word1 = prevWordOptions.get(random.nextInt(prevWordOptions.size()));
             // TODO end based on POS tag - make a method that checks end condition
             if (word1.equals(DELIM)) {
@@ -151,9 +166,9 @@ public class Bigrammer {
      * @param sentencesList a list of sentences: each sentence is pre-tokenized, usually into words
      */
     public void buildModel(List<List<String>> sentencesList) {
-
-        fullWordList = new ArrayList<>();
-        wordIndexMap = new HashMap<>();
+        HashMap<Pair, List<String>> forwardCache = new HashMap<>();
+        HashMap<Pair, List<String>> backwardCache = new HashMap<>();
+        List<String> fullWordList = new ArrayList<>();
 
         // add sentence delimiters to get more natural sentence starts and ends
         for (List<String> oneSentence : sentencesList) {
@@ -170,6 +185,7 @@ public class Bigrammer {
 
         // TODO try out only adding a word if it's not in the list yet
         // makes it less natural statistically but probably adds more fun randomness
+        // and will save space in the model serialization
         for (int i = 0; i < fullWordList.size() - 2; i++) {
             String w1 = fullWordList.get(i);
             String w2 = fullWordList.get(i+1);
@@ -189,9 +205,16 @@ public class Bigrammer {
             backwardCache.get(backwardPair).add(w1);
         }
 
+        model = new BigramModel(fullWordList, forwardCache, backwardCache);
+        calculateWordIndices();
+    }
+
+    private void calculateWordIndices() {
+        wordIndexMap = new HashMap<>();
+
         // make a list of the indices at which a given word appears
-        for (int i = 0; i < fullWordList.size(); i++) {
-            String word = fullWordList.get(i);
+        for (int i = 0; i < model.getFullWordList().size(); i++) {
+            String word = model.getFullWordList().get(i);
             if (!wordIndexMap.containsKey(word)) {
                 wordIndexMap.put(word, new ArrayList<Integer>());
             }
@@ -236,33 +259,26 @@ public class Bigrammer {
         return false;
     }
 
-    private class Pair {
-        String first;
-        String second;
-
-        Pair (String one, String two) {
-            this.first = one;
-            this.second = two;
+    public void saveModelToFile(String fileName) throws FileNotFoundException {
+        if (model == null) {
+            throw new RuntimeException("Refusing to write empty model to file.");
         }
+        Kryo kryo = new Kryo();
+        Output output = new Output(new FileOutputStream(fileName));
+        kryo.writeObject(output, model);
+        output.close();
 
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-
-            Pair pair = (Pair) o;
-
-            if (!first.toLowerCase().equals(pair.first.toLowerCase())) return false;
-            if (!second.toLowerCase().equals(pair.second.toLowerCase())) return false;
-
-            return true;
-        }
-
-        @Override
-        public int hashCode() {
-            int result = first.toLowerCase().hashCode();
-            result = 31 * result + second.toLowerCase().hashCode();
-            return result;
-        }
+        loggie.info("Wrote model to file {}", fileName);
     }
+
+    public void loadModelFromFile(String fileName) throws FileNotFoundException {
+        Kryo kryo = new Kryo();
+        Input input = new Input(new FileInputStream(fileName));
+        model = kryo.readObject(input, BigramModel.class);
+        calculateWordIndices();
+        input.close();
+
+        loggie.info("Loaded model from file {}. Found {} words.", fileName, model.getFullWordList().size());
+    }
+
 }

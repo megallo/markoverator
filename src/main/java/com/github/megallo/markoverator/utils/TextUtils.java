@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.github.megallo.markoverator;
+package com.github.megallo.markoverator.utils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

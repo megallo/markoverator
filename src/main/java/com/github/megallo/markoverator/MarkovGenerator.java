@@ -16,6 +16,7 @@
 
 package com.github.megallo.markoverator;
 
+import com.github.megallo.markoverator.utils.TextUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,6 +51,9 @@ public class MarkovGenerator {
 
         // TODO sample sentence file in project
         bigrams.buildModel(mg.readAndCleanFile(args[0]));
+        bigrams.saveModelToFile("model.kryo");
+//        bigrams.loadModelFromFile("model.kryo");
+
         loggie.info(bigrams.generateRandom());
         loggie.info(bigrams.generateRandom());
         loggie.info(bigrams.generateRandom("bourbon"));

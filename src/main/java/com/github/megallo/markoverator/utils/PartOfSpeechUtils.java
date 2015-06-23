@@ -1,4 +1,4 @@
-package com.github.megallo.markoverator;
+package com.github.megallo.markoverator.utils;
 
 import com.github.rholder.nlp.tagging.FastTag;
 import com.github.rholder.nlp.tagging.Lexicon;

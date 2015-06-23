@@ -55,6 +55,9 @@ public class Bigrammer {
 
     private PartOfSpeechUtils posUtil = new PartOfSpeechUtils();
 
+    /**
+     * Generate a random sentence.
+     */
     public String generateRandom() {
         if (model == null) {
             throw new RuntimeException("No model generated or loaded");
@@ -71,6 +74,11 @@ public class Bigrammer {
         return generateRandom(seed);
     }
 
+    /**
+     * Attempts to find the exact word you're looking for,
+     * and generate a sentence based around it.
+     * @return null if exact string is not found
+     */
     public String generateRandom(String seedWord) {
         if (model == null) {
             throw new RuntimeException("No model generated or loaded");
@@ -84,8 +92,7 @@ public class Bigrammer {
 
         // TODO stemming or wordnet to try harder at finding the word
 
-        // we couldn't find that word, so I guess second best is to return *something*
-        return generateRandom();
+        return null;
     }
 
     private String generateRandom(int seed) {

@@ -58,6 +58,10 @@ public class MarkovGenerator {
         loggie.info(bigrams.generateRandom());
         loggie.info(bigrams.generateRandom("bourbon"));
         loggie.info(bigrams.generateRandom("potato"));
+        String sentence = bigrams.generateRandom("asdfpoiu123456789");
+        if (sentence != null) {
+            loggie.info(sentence);
+        }
     }
 
     public MarkovGenerator() throws IOException {

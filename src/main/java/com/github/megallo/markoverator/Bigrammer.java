@@ -157,8 +157,10 @@ public class Bigrammer {
 
         // add sentence delimiters to get more natural sentence starts and ends
         for (List<String> oneSentence : sentencesList) {
-            fullWordList.add(DELIM);
-            fullWordList.addAll(oneSentence);
+            if (oneSentence.size() > 2) {
+                fullWordList.add(DELIM);
+                fullWordList.addAll(oneSentence);
+            }
         }
         fullWordList.add(DELIM); // don't forget the one at the end
 

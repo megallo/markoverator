@@ -17,6 +17,7 @@
 package com.github.megallo.markoverator;
 
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -24,6 +25,13 @@ import java.util.LinkedList;
 import java.util.List;
 
 public class TextUtilTest {
+
+    TextUtils textUtils;
+
+    @Before
+    public void setUp() throws Exception {
+        textUtils = new TextUtils();
+    }
 
     @Test
     public void testRemoveUrls() {
@@ -33,7 +41,7 @@ public class TextUtilTest {
         withoutUrl.add("to");
         withoutUrl.add("ok?");
 
-        Assert.assertEquals(withoutUrl, TextUtils.removeUrls(new LinkedList<>(Arrays.asList(withUrl.split("\\s+")))));
+        Assert.assertEquals(withoutUrl, textUtils.removeUrls(new LinkedList<>(Arrays.asList(withUrl.split("\\s+")))));
     }
 
     @Test
@@ -44,7 +52,7 @@ public class TextUtilTest {
         withoutUrl.add("see");
         withoutUrl.add("ok?");
 
-        Assert.assertEquals(withoutUrl, TextUtils.removeMentions(new LinkedList<>(Arrays.asList(withUrl.split("\\s+")))));
+        Assert.assertEquals(withoutUrl, textUtils.removeMentions(new LinkedList<>(Arrays.asList(withUrl.split("\\s+")))));
     }
 
     @Test
@@ -55,32 +63,34 @@ public class TextUtilTest {
         withoutUrl.add("see,");
         withoutUrl.add("ok? ");
 
-        Assert.assertEquals(withoutUrl, TextUtils.removeExplicitNewlines(new LinkedList<>(Arrays.asList(withUrl.split("\\s+")))));
+        Assert.assertEquals(withoutUrl, textUtils.removeExplicitNewlines(new LinkedList<>(Arrays.asList(withUrl.split("\\s+")))));
     }
 
     @Test
     public void testRemovePunctuation() {
-        String withUrl = "go see, ok? (awthanks) :)";
-        List<String> withoutUrl = new LinkedList<>();
-        withoutUrl.add("go");
-        withoutUrl.add("see");
-        withoutUrl.add("ok");
-        withoutUrl.add("(awthanks)");
-        withoutUrl.add(":)");
+        String withPunc = "go see, ok? (awthanks) :)";
+        List<String> withoutPunc = new LinkedList<>();
+        withoutPunc.add("go");
+        withoutPunc.add("see");
+        withoutPunc.add("ok");
+        withoutPunc.add("(awthanks)");
+        withoutPunc.add(":)");
 
-        Assert.assertEquals(withoutUrl, TextUtils.removePunctuation(new LinkedList<>(Arrays.asList(withUrl.split("\\s+")))));
+        Assert.assertEquals(withoutPunc, textUtils.removePunctuation(new LinkedList<>(Arrays.asList(withPunc.split("\\s+")))));
     }
 
     @Test
     public void testRemoveParens() {
-        String withUrl = "(go see, ok?) (awthanks) :)";
-        List<String> withoutUrl = new LinkedList<>();
-        withoutUrl.add("go");
-        withoutUrl.add("see,");
-        withoutUrl.add("ok?");
-        withoutUrl.add("(awthanks)");
-        withoutUrl.add(":)");
+        String withParens = "(go see, ok?) (awthanks) :) ;) :P";
+        List<String> withoutParens = new LinkedList<>();
+        withoutParens.add("go");
+        withoutParens.add("see,");
+        withoutParens.add("ok?");
+        withoutParens.add("(awthanks)");
+        withoutParens.add(":)");
+        withoutParens.add(";)");
+        withoutParens.add(":P");
 
-        Assert.assertEquals(withoutUrl, TextUtils.removeUnmatchedParentheses(new LinkedList<>(Arrays.asList(withUrl.split("\\s+")))));
+        Assert.assertEquals(withoutParens, textUtils.removeUnmatchedParentheses(Arrays.asList(withParens.split("\\s+"))));
     }
 }

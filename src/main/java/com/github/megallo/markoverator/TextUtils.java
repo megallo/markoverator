@@ -16,24 +16,31 @@
 
 package com.github.megallo.markoverator;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.ListIterator;
 
 /**
- * Stuff for cleaning and sanitizing text.
+ * Stuff for cleaning and sanitizing HipChat text.
  */
 public class TextUtils {
 
-    private static final List<String> URL_THINGS = 
-        Arrays.asList(".com", ".net", ".org", "www", "http", "://");
+    private  final Logger loggie = LoggerFactory.getLogger(TextUtils.class);
+
+    private static final List<String> URL_THINGS =
+            Arrays.asList(".com", ".net", ".org", "www", "http", "://");
     private static final List<String> PUNCTUATION =
-        Arrays.asList(",", ".", "?", "!", "\"", ";");
+            Arrays.asList(",", ".", "?", "!", "\"", ";", "…", " ");
+
+    // TODO handle punctuation instead of pretending it doesn't exist
 
     /**
      * Remove entire words that are reminiscent of URLs.
      */
-    public static List<String> removeUrls(List<String> sentence) {
+    public List<String> removeUrls(List<String> sentence) {
         ListIterator<String> it = sentence.listIterator();
         while (it.hasNext()) {
             String word = it.next();
@@ -50,7 +57,7 @@ public class TextUtils {
     /**
      * Remove words starting with '@'
      */
-    public static List<String> removeMentions(List<String> sentence) {
+    public List<String> removeMentions(List<String> sentence) {
         ListIterator<String> it = sentence.listIterator();
         while (it.hasNext()) {
             String word = it.next();
@@ -65,7 +72,7 @@ public class TextUtils {
      * Remove the actual text "\n", often common in
      * stack traces and other pasting
      */
-    public static List<String> removeExplicitNewlines(List<String> sentence) {
+    public List<String> removeExplicitNewlines(List<String> sentence) {
         ListIterator<String> it = sentence.listIterator();
         while (it.hasNext()) {
             String word = it.next();
@@ -77,7 +84,7 @@ public class TextUtils {
     /**
      * Remove selected punctuation.
      */
-    public static List<String> removePunctuation(List<String> sentence) {
+    public List<String> removePunctuation(List<String> sentence) {
         ListIterator<String> it = sentence.listIterator();
         while (it.hasNext()) {
             String word = it.next();
@@ -90,19 +97,26 @@ public class TextUtils {
     }
 
 
-    // TODO still finding words ending in ) - e.g. "whatever)"
     /**
      * Remove unmatched parentheses stuck to words, but leave HipChat emoticons (mindblown)
-     * and smiley faces :) :( (: ):
+     * and smiley faces :) :( (: ): ;) :P
      */
-    public static List<String> removeUnmatchedParentheses(List<String> sentence) {
+    public  List<String> removeUnmatchedParentheses(List<String> sentence) {
         ListIterator<String> it = sentence.listIterator();
         while (it.hasNext()) {
             String word = it.next();
-            // smilies are a-ok
-            if (word.equals(":)") || word.equals("(:")) { // TODO see if ;) is causing the blank words
+
+            // an emoticon, hooray
+            if (word.startsWith("(") && word.endsWith(")")) {
                 continue;
             }
+
+            // a smiley face, hooray
+            if (word.equals(":)") || word.equals("(:") || word.equals(";)") || word.toLowerCase().equals(":p")) {
+                continue;
+            }
+
+            // part of a parenthetical phrase, noooo
             if (word.startsWith("(") && !word.endsWith(")")) {
                 // "(or"
                 it.set(word.replace("(", ""));
@@ -115,4 +129,19 @@ public class TextUtils {
 
         return sentence;
     }
+
+    public  List<String> removeBotCommands(List<String> sentence) {
+        StringBuilder sb = new StringBuilder();
+
+        for (String word : sentence) {
+            sb.append(word.toLowerCase()).append(" ");
+        }
+        String recompiledSentence = sb.toString();
+        if (recompiledSentence.contains("image me") || recompiledSentence.contains("gif me") || recompiledSentence.contains("/gif")) {
+            sentence.clear();
+        }
+
+        return sentence;
+    }
+
 }

@@ -30,11 +30,6 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
-import static com.github.megallo.markoverator.TextUtils.removeExplicitNewlines;
-import static com.github.megallo.markoverator.TextUtils.removeMentions;
-import static com.github.megallo.markoverator.TextUtils.removePunctuation;
-import static com.github.megallo.markoverator.TextUtils.removeUnmatchedParentheses;
-import static com.github.megallo.markoverator.TextUtils.removeUrls;
 
 /**
  * Build a bigram model out of text and generate some sentences.
@@ -43,6 +38,8 @@ public class MarkovGenerator {
 
     private static final Logger loggie = LoggerFactory.getLogger(MarkovGenerator.class);
 
+    private TextUtils textUtils;
+
     /**
      * Do all the things! Currently takes file name as single argument.
      * Put the file in src/main/resources and give me the file name without path
@@ -50,12 +47,17 @@ public class MarkovGenerator {
     public static void main(String[] args) throws IOException {
         MarkovGenerator mg = new MarkovGenerator();
         Bigrammer bigrams = new Bigrammer();
+
         // TODO sample sentence file in project
         bigrams.buildModel(mg.readAndCleanFile(args[0]));
         loggie.info(bigrams.generateRandom());
         loggie.info(bigrams.generateRandom());
-        loggie.info(bigrams.generateRandom("allergies"));
+        loggie.info(bigrams.generateRandom("bourbon"));
         loggie.info(bigrams.generateRandom("potato"));
+    }
+
+    public MarkovGenerator() throws IOException {
+        textUtils = new TextUtils();
     }
 
     private List<List<String>> readAndCleanFile(String filename) throws IOException {
@@ -84,11 +86,12 @@ public class MarkovGenerator {
     private List<String> cleanUpLine(String sentence) {
         String[] split = sentence.split("\\s+"); // break on whitespace
         List<String> splitSentence = new LinkedList<>(Arrays.asList(split));
-        splitSentence = removeUrls(splitSentence);
-        splitSentence = removeMentions(splitSentence);
-        splitSentence = removeExplicitNewlines(splitSentence);
-        splitSentence = removeUnmatchedParentheses(splitSentence);
-        splitSentence = removePunctuation(splitSentence);
+        splitSentence = textUtils.removeBotCommands(splitSentence);
+        splitSentence = textUtils.removeUrls(splitSentence);
+        splitSentence = textUtils.removeMentions(splitSentence);
+        splitSentence = textUtils.removeExplicitNewlines(splitSentence);
+        splitSentence = textUtils.removeUnmatchedParentheses(splitSentence);
+        splitSentence = textUtils.removePunctuation(splitSentence);
 
         if (loggie.isDebugEnabled()) {
             StringBuilder sb = new StringBuilder();

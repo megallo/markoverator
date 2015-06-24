@@ -24,6 +24,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
@@ -51,8 +52,8 @@ public class MarkovGenerator {
 
         // TODO sample sentence file in project
         bigrams.buildModel(mg.readAndCleanFile(args[0]));
-        bigrams.saveModelToFile("model.kryo");
-//        bigrams.loadModelFromFile("model.kryo");
+        bigrams.saveModelToFile(new FileOutputStream(new File("model.kryo")));
+//}        bigrams.loadModelFromFile(new FileInputStream(new File("model.kryo")));
 
         loggie.info(bigrams.generateRandom());
         loggie.info(bigrams.generateRandom());

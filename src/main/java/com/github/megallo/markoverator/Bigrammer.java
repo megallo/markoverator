@@ -266,26 +266,26 @@ public class Bigrammer {
         return false;
     }
 
-    public void saveModelToFile(String fileName) throws FileNotFoundException {
+    public void saveModelToFile(FileOutputStream outputStream) throws FileNotFoundException {
         if (model == null) {
             throw new RuntimeException("Refusing to write empty model to file.");
         }
         Kryo kryo = new Kryo();
-        Output output = new Output(new FileOutputStream(fileName));
+        Output output = new Output(outputStream);
         kryo.writeObject(output, model);
         output.close();
 
-        loggie.info("Wrote model to file {}", fileName);
+        loggie.info("Wrote model to file");
     }
 
-    public void loadModelFromFile(String fileName) throws FileNotFoundException {
+    public void loadModelFromFile(FileInputStream inputStream) throws FileNotFoundException {
         Kryo kryo = new Kryo();
-        Input input = new Input(new FileInputStream(fileName));
+        Input input = new Input(inputStream);
         model = kryo.readObject(input, BigramModel.class);
         calculateWordIndices();
         input.close();
 
-        loggie.info("Loaded model from file {}. Found {} words.", fileName, model.getFullWordList().size());
+        loggie.info("Loaded model; found {} words", model.getFullWordList().size());
     }
 
 }

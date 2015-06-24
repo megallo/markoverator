@@ -130,7 +130,7 @@ public class TextUtils {
         return sentence;
     }
 
-    public  List<String> removeBotCommands(List<String> sentence) {
+    public List<String> removeBotCommands(List<String> sentence) {
         StringBuilder sb = new StringBuilder();
 
         for (String word : sentence) {
@@ -139,6 +139,18 @@ public class TextUtils {
         String recompiledSentence = sb.toString();
         if (recompiledSentence.contains("image me") || recompiledSentence.contains("gif me") || recompiledSentence.contains("/gif")) {
             sentence.clear();
+        }
+
+        return sentence;
+    }
+
+    public List<String> removeEmptyWords(List<String> sentence) {
+        ListIterator<String> it = sentence.listIterator();
+        while (it.hasNext()) {
+            String word = it.next();
+            if (word.length() == 0 || word.equals("'")) {
+                it.remove();
+            }
         }
 
         return sentence;

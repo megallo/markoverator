@@ -53,7 +53,7 @@ public class MarkovGenerator {
         // TODO sample sentence file in project
         bigrams.buildModel(mg.readAndCleanFile(args[0]));
         bigrams.saveModelToFile(new FileOutputStream(new File("model.kryo")));
-//}        bigrams.loadModelFromFile(new FileInputStream(new File("model.kryo")));
+//        bigrams.loadModelFromFile(new FileInputStream(new File("model.kryo")));
 
         loggie.info(bigrams.generateRandom());
         loggie.info(bigrams.generateRandom());
@@ -101,6 +101,7 @@ public class MarkovGenerator {
         splitSentence = textUtils.removeExplicitNewlines(splitSentence);
         splitSentence = textUtils.removeUnmatchedParentheses(splitSentence);
         splitSentence = textUtils.removePunctuation(splitSentence);
+        splitSentence = textUtils.removeEmptyWords(splitSentence);
 
         if (loggie.isDebugEnabled()) {
             StringBuilder sb = new StringBuilder();

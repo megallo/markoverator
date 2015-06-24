@@ -250,20 +250,16 @@ public class Bigrammer {
     }
 
     private boolean isDecentEndingWord(List<String> sentence) {
-        // right now just checks to see if it's an adverb
+        // avoid ending with a preposition, adjective, etc
         List<String> tags = posUtil.tagSentence(sentence);
 
         String endTag = tags.get(tags.size() - 1);
-        if (endTag.equals("RB")) {
-            loggie.info("Succeeding at adverb: word is {}", sentence.get(sentence.size()-1));
-            return true;
+        if (endTag.equals("IN") || endTag.equals("CC") || endTag.equals("JJ") || endTag.equals("TO") || endTag.equals("DT")) {
+            loggie.info("Rejecting ending of :: {}", sentence.get(sentence.size()-1));
+            return false;
         }
-        // this is duplicated for debugging only
-        if (endTag.equals("NP") || endTag.equals("NNP")) {
-            loggie.info("Succeeding at noun: word is {}", sentence.get(sentence.size()-1));
-            return true;
-        }
-        return false;
+
+        return true;
     }
 
     public void saveModelToFile(FileOutputStream outputStream) throws FileNotFoundException {

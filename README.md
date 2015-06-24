@@ -4,6 +4,22 @@
 
 Markov text generator and stuff.
 
+##Installation
+
+###Maven
+```xml
+    <dependency>
+      <groupId>com.github.megallo</groupId>
+      <artifactId>markoverator</artifactId>
+      <version>1.0.1</version>
+    </dependency>
+```
+
+###Gradle
+```groovy
+    compile "com.github.megallo:markoverator:1.0.1"
+```
+
 ###Building from source
 This module uses a [Gradle](http://gradle.org)-based build system. In the instructions
 below, [`./gradlew`](http://vimeo.com/34436402) is invoked from the root of the source tree and serves as

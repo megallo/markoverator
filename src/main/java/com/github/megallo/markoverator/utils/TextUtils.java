@@ -148,7 +148,7 @@ public class TextUtils {
         ListIterator<String> it = sentence.listIterator();
         while (it.hasNext()) {
             String word = it.next();
-            if (word.length() == 0 || word.equals("'")) {
+            if (word.trim().length() == 0 || word.trim().equals("'")) {
                 it.remove();
             }
         }

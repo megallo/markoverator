@@ -123,6 +123,8 @@ public class Bigrammer {
             // choose a random possible next word based on the two given ones
             String nextWord = nextWordOptions.get(random.nextInt(nextWordOptions.size()));
 
+            loggie.debug("Potential next word -={}=-", nextWord);
+
             // if the next word is the end, don't even bother adding it
             if (nextWord.equals(DELIM)) {
                 break;
@@ -254,8 +256,15 @@ public class Bigrammer {
         List<String> tags = posUtil.tagSentence(sentence);
 
         String endTag = tags.get(tags.size() - 1);
-        if (endTag.equals("IN") || endTag.equals("CC") || endTag.equals("JJ") || endTag.equals("TO") || endTag.equals("DT")) {
-            loggie.info("Rejecting ending of :: {}", sentence.get(sentence.size()-1));
+        String endWord = sentence.get(sentence.size()-1);
+        if (    endTag.equals("IN") ||      // preposition
+                endTag.equals("CC") ||      // conjunction
+                endTag.equals("JJ") ||      // adjective
+                endTag.equals("TO") ||      // literally "to"
+                endTag.equals("DT") ||      // determiner
+                endTag.equals("PP$"))       // possessive pronoun
+        {
+            loggie.info("Rejecting ending of :: {}", endWord);
             return false;
         }
 

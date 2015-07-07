@@ -26,9 +26,8 @@ import com.google.common.collect.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -262,19 +261,19 @@ public class Bigrammer {
         return true;
     }
 
-    public void saveModelToFile(FileOutputStream outputStream) throws FileNotFoundException {
+    public void saveModel(OutputStream outputStream) {
         if (model == null) {
-            throw new RuntimeException("Refusing to write empty model to file.");
+            throw new RuntimeException("Refusing to write empty model.");
         }
         Kryo kryo = new Kryo();
         Output output = new Output(outputStream);
         kryo.writeObject(output, model);
         output.close();
 
-        loggie.info("Wrote model to file");
+        loggie.info("Wrote model");
     }
 
-    public void loadModelFromFile(FileInputStream inputStream) throws FileNotFoundException {
+    public void loadModel(InputStream inputStream) {
         Kryo kryo = new Kryo();
         Input input = new Input(inputStream);
         model = kryo.readObject(input, BigramModel.class);

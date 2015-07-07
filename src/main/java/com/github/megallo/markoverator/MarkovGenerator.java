@@ -52,8 +52,8 @@ public class MarkovGenerator {
 
         // TODO sample sentence file in project
         bigrams.buildModel(mg.readAndCleanFile(args[0]));
-        bigrams.saveModelToFile(new FileOutputStream(new File("model.kryo")));
-//        bigrams.loadModelFromFile(new FileInputStream(new File("model.kryo")));
+        bigrams.saveModel(new FileOutputStream(new File("model.kryo")));
+//        bigrams.loadModel(new FileInputStream(new File("model.kryo")));
 
         loggie.info(bigrams.generateRandom());
         loggie.info(bigrams.generateRandom());
@@ -65,7 +65,7 @@ public class MarkovGenerator {
         }
     }
 
-    public MarkovGenerator() throws IOException {
+    public MarkovGenerator() {
         textUtils = new TextUtils();
     }
 

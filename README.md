@@ -1,12 +1,30 @@
 [![Build Status](http://img.shields.io/travis/megallo/markoverator.svg)](https://travis-ci.org/megallo/markoverator) [![License](http://img.shields.io/badge/license-apache%202-brightgreen.svg)](https://github.com/megallo/markoverator/blob/master/LICENSE)
 
-##What is this?
+## What is this?
 
-Markov text generator and stuff.
+Backwards/forwards Markov text generator specific to HipChat logs.
 
-##Installation
+Currently the TextUtils can be used to take raw chat sentences and remove the @mentions and URLs (also removes punctuation, but I'm working on that) while leaving the emoticons. 
 
-###Maven
+Feed the cleaned sentences into the model builder of the generator, and then you can generate sentences. Optionally pass in a seed word and it will generate a sentence with that word somewhere in the middle, or return null if that word doesn't exist in the source model.
+
+The model can be serialized to a file and loaded as needed instead of generating it every time.
+
+Example usage can be found in the [MarkovGenerator](src/main/java/com/github/megallo/markoverator/MarkovGenerator.java) class.
+
+#### Input
+The MarkovGenerator's main() method takes a path to a file as its only argument.
+The file contains one message per line, e.g.
+```
+Test. Test. Is this thing on?
+(awwyiss)
+@here can someone take a look at that pull request
+/code 127.0.0.1:8080
+```
+
+## Installation
+
+### Maven
 ```xml
     <dependency>
       <groupId>com.github.megallo</groupId>
@@ -15,12 +33,12 @@ Markov text generator and stuff.
     </dependency>
 ```
 
-###Gradle
+### Gradle
 ```groovy
     compile "com.github.megallo:markoverator:1.0.2"
 ```
 
-###Building from source
+### Building from source
 This module uses a [Gradle](http://gradle.org)-based build system. In the instructions
 below, [`./gradlew`](http://vimeo.com/34436402) is invoked from the root of the source tree and serves as
 a cross-platform, self-contained bootstrap mechanism for the build. The only

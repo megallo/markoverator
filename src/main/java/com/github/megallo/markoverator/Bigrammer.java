@@ -46,13 +46,19 @@ public class Bigrammer {
 
     private Random random = new Random();
 
-    private final static int MAX_HALF_LENGTH = 8; // TODO configurable
+    private int maxHalfLength = 8;
     private final static String DELIM = "<DELIM>";
 
     private BigramModel model = null;
     private Map<String, List<Integer>> wordIndexMap; // calculated, so not part of the model object
 
     private PartOfSpeechUtils posUtil = new PartOfSpeechUtils();
+
+    public Bigrammer() { }
+
+    public Bigrammer(int maxHalfLength) {
+        this.maxHalfLength = maxHalfLength;
+    }
 
     /**
      * Generate a random sentence.
@@ -116,7 +122,7 @@ public class Bigrammer {
         List<String> generated = Lists.newArrayList(word1, word2);
 
         // loops until we reach a size we like, or the content reaches a good stopping point
-        while (generated.size() <= MAX_HALF_LENGTH) {
+        while (generated.size() <= maxHalfLength) {
 
             List<String> nextWordOptions = model.getForwardCache().get(new Pair(word1, word2));
             // choose a random possible next word based on the two given ones
@@ -145,7 +151,7 @@ public class Bigrammer {
 
     private List<String> generateBackwardText(String word2, String word3) {
         Stack<String> generated = new Stack<>();
-        while (generated.size() <= MAX_HALF_LENGTH) {
+        while (generated.size() <= maxHalfLength) {
             generated.push(word3);
             List<String> prevWordOptions = model.getBackwardCache().get(new Pair(word2, word3));
             String word1 = prevWordOptions.get(random.nextInt(prevWordOptions.size()));
@@ -237,12 +243,12 @@ public class Bigrammer {
      */
     private boolean checkEndCondition(List<String> words) {
         // check length
-        if (words.size() > MAX_HALF_LENGTH) {
+        if (words.size() > maxHalfLength) {
             return true;
         }
 
         // starting partway through, figure out a good word to end on
-        if ((words.size() > MAX_HALF_LENGTH/2 && isDecentEndingWord(words))) {
+        if ((words.size() > maxHalfLength /2 && isDecentEndingWord(words))) {
             return true;
         }
 

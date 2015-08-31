@@ -48,7 +48,7 @@ public class MarkovGenerator {
      */
     public static void main(String[] args) throws IOException {
         MarkovGenerator mg = new MarkovGenerator();
-        Bigrammer bigrams = new Bigrammer();
+        Bigrammer bigrams = new Bigrammer(20);
 
         // TODO sample sentence file in project
         bigrams.buildModel(mg.readAndCleanFile(args[0]));
@@ -74,7 +74,7 @@ public class MarkovGenerator {
 
         BufferedReader br = null;
         try {
-            File file = new File(getClass().getClassLoader().getResource(filename).getFile());
+            File file = new File(filename);
             br = new BufferedReader(new InputStreamReader(new FileInputStream(file)));
 
             String line;

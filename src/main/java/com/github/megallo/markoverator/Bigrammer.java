@@ -250,19 +250,23 @@ public class Bigrammer {
         return false;
     }
 
-    private boolean isDecentEndingWord(List<String> sentence) {
+    protected boolean isDecentEndingWord(List<String> sentence) {
         // avoid ending with a preposition, adjective, etc
         List<String> tags = posUtil.tagSentence(sentence);
 
         String endTag = tags.get(tags.size() - 1);
-        String endWord = sentence.get(sentence.size()-1);
+        String endWord = sentence.get(sentence.size()-1).toLowerCase();
         if (    endTag.equals("IN") ||      // preposition
                 endTag.equals("CC") ||      // conjunction
-                endTag.equals("JJ") ||      // adjective
                 endTag.equals("TO") ||      // literally "to"
                 endTag.equals("DT") ||      // determiner
-                endTag.equals("PP$"))       // possessive pronoun
-        {
+                endTag.equals("PRP$") ||    // possessive pronoun
+                endWord.equals("i")   ||    // subjective pronouns
+                endWord.equals("she") ||
+                endWord.equals("he")  ||
+                endWord.equals("we")  ||
+                endWord.equals("they"))
+                {
             loggie.info("Rejecting ending of :: {}", endWord);
             return false;
         }

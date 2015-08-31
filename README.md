@@ -29,13 +29,13 @@ Test. Test. Is this thing on?
     <dependency>
       <groupId>com.github.megallo</groupId>
       <artifactId>markoverator</artifactId>
-      <version>1.0.2</version>
+      <version>1.0.3</version>
     </dependency>
 ```
 
 ### Gradle
 ```groovy
-    compile "com.github.megallo:markoverator:1.0.2"
+    compile "com.github.megallo:markoverator:1.0.3"
 ```
 
 ### Building from source

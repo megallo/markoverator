@@ -38,6 +38,8 @@ public class TextUtils {
             Arrays.asList("\"", "…");
     private static final Pattern ENDING_PUNCTUATION_REGEX =
             Pattern.compile("[\\.!\\?,;:]+$");
+    private static final Pattern REATTACH_PUNCTUATION_REGEX =
+            Pattern.compile("[\\.!\\?,;:]+");
 
     // TODO handle punctuation instead of pretending it doesn't exist
 
@@ -201,6 +203,54 @@ public class TextUtils {
         }
 
         return sentence;
+    }
+
+    /**
+     * Post-processing step.
+     *
+     * In order to make a sentence look normally formatted,
+     * take all of the detached punctuation and stick it back onto the
+     * ends of the words occurring right before them.
+     *
+     * "Hey !" -> "Hey!"
+     * "wat ?!" -> "wat?!"
+     * "beep & boop" -> "beep & boop"
+     *
+     * @param sentenceTokens presumably a generated sentence, but you do you
+     * @return the same sentence with punctuation reattached and those same
+     *         punctuation tokens deleted
+     */
+    public List<String> reattachPunctuation(List<String> sentenceTokens) {
+
+        if (sentenceTokens == null) {
+            return null;
+        }
+
+        for (int i = 1; i < sentenceTokens.size(); i++) {
+            // start with 1 so we don't try to reattach to a previous at index 0
+            String word = sentenceTokens.get(i);
+
+            Matcher m = REATTACH_PUNCTUATION_REGEX.matcher(word);
+            if (m.matches()) { // we only want exactly all punctuation
+                sentenceTokens.set(i-1, sentenceTokens.get(i-1) + word);
+                sentenceTokens.remove(i);
+            }
+        }
+
+        return sentenceTokens;
+    }
+
+    public String stringify(List<String> tokens) {
+        if (tokens == null) {
+            return null;
+        }
+
+        StringBuilder sb = new StringBuilder();
+        for (String word : tokens) {
+            sb.append(word).append(" ");
+        }
+
+        return sb.toString();
     }
 
 }

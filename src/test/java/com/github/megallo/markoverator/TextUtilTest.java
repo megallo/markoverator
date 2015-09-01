@@ -17,14 +17,12 @@
 package com.github.megallo.markoverator;
 
 import com.github.megallo.markoverator.utils.TextUtils;
-import com.google.common.collect.Lists;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 public class TextUtilTest {
 
@@ -160,4 +158,31 @@ public class TextUtilTest {
         Assert.assertEquals(fixedPunc, textUtils.handlePunctuation(origSplit));
     }
 
+    @Test
+    public void testReattachPunctuation() {
+
+        String orig = "Hey , how about tomorrow ?! dogs & cats";
+        LinkedList<String> origSplit = new LinkedList<>(Arrays.asList(orig.split("\\s+")));
+
+        List<String> fixedPunc = new LinkedList<>();
+        fixedPunc.add("Hey,");
+        fixedPunc.add("how");
+        fixedPunc.add("about");
+        fixedPunc.add("tomorrow?!");
+        fixedPunc.add("dogs");
+        fixedPunc.add("&");
+        fixedPunc.add("cats");
+
+        Assert.assertEquals(fixedPunc, textUtils.reattachPunctuation(origSplit));
+    }
+
+    @Test
+    public void testReattachPunctuationNotNPE() {
+
+        LinkedList<String> origSplit = null;
+
+        List<String> fixedPunc = null;
+
+        Assert.assertEquals(fixedPunc, textUtils.reattachPunctuation(origSplit));
+    }
 }

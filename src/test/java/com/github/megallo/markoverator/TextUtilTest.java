@@ -17,13 +17,12 @@
 package com.github.megallo.markoverator;
 
 import com.github.megallo.markoverator.utils.TextUtils;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 public class TextUtilTest {
 
@@ -69,7 +68,8 @@ public class TextUtilTest {
 
     @Test
     public void testRemovePunctuation() {
-        String withPunc = "go see, ok? (awthanks) :)";
+        String orig = "go see, ok? (awthanks) :)";
+        LinkedList<String> origSplit = new LinkedList<>(Arrays.asList(orig.split("\\s+")));
         List<String> withoutPunc = new LinkedList<>();
         withoutPunc.add("go");
         withoutPunc.add("see");
@@ -77,7 +77,8 @@ public class TextUtilTest {
         withoutPunc.add("(awthanks)");
         withoutPunc.add(":)");
 
-        Assert.assertEquals(withoutPunc, textUtils.removePunctuation(new LinkedList<>(Arrays.asList(withPunc.split("\\s+")))));
+        Assert.assertEquals(withoutPunc,
+                textUtils.removePunctuation(origSplit, Arrays.asList(",", "?")));
     }
 
     @Test
@@ -93,5 +94,95 @@ public class TextUtilTest {
         withoutParens.add(":P");
 
         Assert.assertEquals(withoutParens, textUtils.removeUnmatchedParentheses(Arrays.asList(withParens.split("\\s+"))));
+    }
+
+    @Test
+    public void testHandlePunctuationRegex() {
+        String withPunc = "Hey! How's it going? (awwyiss) :)";
+        LinkedList<String> split = new LinkedList<>(Arrays.asList(withPunc.split("\\s+")));
+
+        List<String> fixedPunc = new LinkedList<>();
+        fixedPunc.add("Hey");
+        fixedPunc.add("!");
+        fixedPunc.add("How's");
+        fixedPunc.add("it");
+        fixedPunc.add("going");
+        fixedPunc.add("?");
+        fixedPunc.add("(awwyiss)");
+        fixedPunc.add(":)");
+
+        Assert.assertEquals(fixedPunc, textUtils.handlePunctuation(split));
+
+    }
+
+    @Test
+    public void testHandlePunctuationMultiples() {
+        String withPunc = "Hey!!! Wat??";
+        LinkedList<String> split = new LinkedList<>(Arrays.asList(withPunc.split("\\s+")));
+
+        List<String> fixedPunc = new LinkedList<>();
+        fixedPunc.add("Hey");
+        fixedPunc.add("!!!");
+        fixedPunc.add("Wat");
+        fixedPunc.add("??");
+
+        Assert.assertEquals(fixedPunc, textUtils.handlePunctuation(split));
+
+    }
+
+    @Test
+    public void testHandlePunctuationRemoval() {
+        String orig = "\"what?\" nope, (disappear) '";
+        LinkedList<String> origSplit = new LinkedList<>(Arrays.asList(orig.split("\\s+")));
+
+        List<String> fixedPunc = new LinkedList<>();
+        fixedPunc.add("what");
+        fixedPunc.add("?");
+        fixedPunc.add("nope");
+        fixedPunc.add(",");
+        fixedPunc.add("(disappear)");
+
+        Assert.assertEquals(fixedPunc, textUtils.handlePunctuation(origSplit));
+    }
+
+    @Test
+    public void testHandlePunctuationByLeavingItAlone() {
+        String orig = "? bwah ?";
+        LinkedList<String> origSplit = new LinkedList<>(Arrays.asList(orig.split("\\s+")));
+
+        List<String> fixedPunc = new LinkedList<>();
+        fixedPunc.add("?");
+        fixedPunc.add("bwah");
+        fixedPunc.add("?");
+
+        Assert.assertEquals(fixedPunc, textUtils.handlePunctuation(origSplit));
+    }
+
+    @Test
+    public void testReattachPunctuation() {
+
+        String orig = "Hey , how about tomorrow ?! dogs & cats";
+        LinkedList<String> origSplit = new LinkedList<>(Arrays.asList(orig.split("\\s+")));
+
+        List<String> fixedPunc = new LinkedList<>();
+        fixedPunc.add("Hey,");
+        fixedPunc.add("how");
+        fixedPunc.add("about");
+        fixedPunc.add("tomorrow?!");
+        fixedPunc.add("dogs");
+        fixedPunc.add("&");
+        fixedPunc.add("cats");
+
+        Assert.assertEquals(fixedPunc, textUtils.reattachPunctuation(origSplit));
+    }
+
+    @Test
+    public void testReattachPunctuationNotNPE() {
+
+        LinkedList<String> origSplit = null;
+
+        List<String> fixedPunc = null;
+
+        Assert.assertEquals(fixedPunc, textUtils.reattachPunctuation(origSplit));
     }
 }

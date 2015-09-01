@@ -63,7 +63,7 @@ public class Bigrammer {
     /**
      * Generate a random sentence.
      */
-    public String generateRandom() {
+    public List<String> generateRandom() {
         if (model == null) {
             throw new RuntimeException("No model generated or loaded");
         }
@@ -84,7 +84,7 @@ public class Bigrammer {
      * and generate a sentence based around it.
      * @return null if exact string is not found
      */
-    public String generateRandom(String seedWord) {
+    public List<String> generateRandom(String seedWord) {
         if (model == null) {
             throw new RuntimeException("No model generated or loaded");
         }
@@ -100,22 +100,19 @@ public class Bigrammer {
         return null;
     }
 
-    private String generateRandom(int seed) {
+    private List<String> generateRandom(int seed) {
 
         String w1 = model.getFullWordList().get(seed);
         String w2 = model.getFullWordList().get(seed + 1);
 
         List<String> backwardText = generateBackwardText(w1, w2); // does not include seed word
         List<String> forwardText = generateForwardText(w1, w2);   // includes seed word
-        backwardText.addAll(forwardText);                         // and mush 'em together
+        backwardText.addAll(forwardText);// and mush 'em together
         backwardText.removeAll(Lists.newArrayList(DELIM));
 
-        StringBuilder sb = new StringBuilder();
-        for (String word : backwardText) {
-            sb.append(word).append(" ");
-        }
+        // backwardText is now the entire thing
 
-        return sb.toString();
+        return backwardText;
     }
 
     private List<String> generateForwardText(String word1, String word2) {
@@ -256,6 +253,7 @@ public class Bigrammer {
         return false;
     }
 
+    // TODO no commas, colons, ampersands, semicolons
     protected boolean isDecentEndingWord(List<String> sentence) {
         // avoid ending with a preposition, adjective, etc
         List<String> tags = posUtil.tagSentence(sentence);

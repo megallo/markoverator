@@ -17,9 +17,6 @@
 package com.github.megallo.markoverator;
 
 import com.github.megallo.markoverator.utils.TextUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -31,6 +28,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /**
@@ -55,18 +54,23 @@ public class MarkovGenerator {
         bigrams.saveModel(new FileOutputStream(new File("model.kryo")));
 //        bigrams.loadModel(new FileInputStream(new File("model.kryo")));
 
-        loggie.info(bigrams.generateRandom());
-        loggie.info(bigrams.generateRandom());
-        loggie.info(bigrams.generateRandom("bourbon"));
-        loggie.info(bigrams.generateRandom("potato"));
-        String sentence = bigrams.generateRandom("asdfpoiu123456789");
-        if (sentence != null) {
-            loggie.info(sentence);
+        for (int i = 0; i < 10; i++) {
+            List<String> generatedTokens = bigrams.generateRandom();
+            loggie.info(mg.postProcess(generatedTokens));
         }
+
+        loggie.info(mg.postProcess(bigrams.generateRandom("(facepalm)")));
+        loggie.info(mg.postProcess(bigrams.generateRandom("bourbon")));
+        loggie.info(mg.postProcess(bigrams.generateRandom("potato")));
+
     }
 
     public MarkovGenerator() {
         textUtils = new TextUtils();
+    }
+
+    public String postProcess(List<String> tokens) {
+        return textUtils.stringify(textUtils.reattachPunctuation(tokens));
     }
 
     private List<List<String>> readAndCleanFile(String filename) throws IOException {
@@ -100,7 +104,7 @@ public class MarkovGenerator {
         splitSentence = textUtils.removeMentions(splitSentence);
         splitSentence = textUtils.removeExplicitNewlines(splitSentence);
         splitSentence = textUtils.removeUnmatchedParentheses(splitSentence);
-        splitSentence = textUtils.removePunctuation(splitSentence);
+        splitSentence = textUtils.handlePunctuation(splitSentence);
         splitSentence = textUtils.removeEmptyWords(splitSentence);
 
         if (loggie.isDebugEnabled()) {

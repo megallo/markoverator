@@ -100,7 +100,7 @@ public class MarkovGenerator {
         splitSentence = textUtils.removeMentions(splitSentence);
         splitSentence = textUtils.removeExplicitNewlines(splitSentence);
         splitSentence = textUtils.removeUnmatchedParentheses(splitSentence);
-        splitSentence = textUtils.removePunctuation(splitSentence);
+        splitSentence = textUtils.handlePunctuation(splitSentence);
         splitSentence = textUtils.removeEmptyWords(splitSentence);
 
         if (loggie.isDebugEnabled()) {

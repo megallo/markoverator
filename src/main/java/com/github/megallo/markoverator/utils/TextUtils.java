@@ -16,6 +16,8 @@
 
 package com.github.megallo.markoverator.utils;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,8 +34,10 @@ public class TextUtils {
 
     private static final List<String> URL_THINGS =
             Arrays.asList(".com", ".net", ".org", "www", "http", "://");
-    private static final List<String> PUNCTUATION =
-            Arrays.asList(",", ".", "?", "!", "\"", ";", "…", " ");
+    private static final List<String> REMOVE_THIS_PUNCTUATION =
+            Arrays.asList("\"", "…");
+    private static final Pattern ENDING_PUNCTUATION_REGEX =
+            Pattern.compile("[\\.!\\?,;:]+$");
 
     // TODO handle punctuation instead of pretending it doesn't exist
 
@@ -84,11 +88,11 @@ public class TextUtils {
     /**
      * Remove selected punctuation.
      */
-    public List<String> removePunctuation(List<String> sentence) {
+    public List<String> removePunctuation(List<String> sentence, List<String> punctuationToRemove) {
         ListIterator<String> it = sentence.listIterator();
         while (it.hasNext()) {
             String word = it.next();
-            for (String punc : PUNCTUATION) {
+            for (String punc : punctuationToRemove) {
                 word = word.replace(punc, "");
             }
             it.set(word);
@@ -104,7 +108,7 @@ public class TextUtils {
     public  List<String> removeUnmatchedParentheses(List<String> sentence) {
         ListIterator<String> it = sentence.listIterator();
         while (it.hasNext()) {
-            String word = it.next();
+            String word = it.next().trim();
 
             // an emoticon, hooray
             if (word.startsWith("(") && word.endsWith(")")) {
@@ -148,9 +152,52 @@ public class TextUtils {
         ListIterator<String> it = sentence.listIterator();
         while (it.hasNext()) {
             String word = it.next();
-            if (word.trim().length() == 0 || word.trim().equals("'")) {
+            if (word.trim().length() == 0) {
                 it.remove();
             }
+        }
+
+        return sentence;
+    }
+
+    public List<String> handlePunctuation(List<String> sentence) {
+        ListIterator<String> it = sentence.listIterator();
+
+        while (it.hasNext()) {
+            String word = it.next().trim();
+
+            // handle parentheses in the parentheses method, not here
+
+            // leave in single quotes, we're ignoring those completely so
+            // possessives and contractions don't get messed up.
+            // unless it's standalone, in which case kill it with fire
+            if(word.equals("'")) {
+                it.remove();
+                break;
+            }
+
+            // remove multi-word-spanning stuff like quotation marks and ellipses
+            for (String punc : REMOVE_THIS_PUNCTUATION) {
+                word = word.replace(punc, "");
+            }
+            it.set(word);
+
+            // space out delimiter punctuation like periods and semicolons
+            Matcher m = ENDING_PUNCTUATION_REGEX.matcher(word);
+            if (m.find()) {
+                if (m.start() == 0 && m.end() == word.length()) {
+                    // if the entire word is punctuation, we're all set. leave it alone
+                } else {
+                    String group = m.group();
+
+                    // remove the punctuation from where we found it
+                    String replaced = word.replace(group, "");
+                    it.set(replaced);
+
+                    it.add(group); // add the found punctuation as a standalone token
+                }
+            }
+
         }
 
         return sentence;

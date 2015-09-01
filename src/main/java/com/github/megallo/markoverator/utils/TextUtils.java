@@ -212,9 +212,9 @@ public class TextUtils {
      * take all of the detached punctuation and stick it back onto the
      * ends of the words occurring right before them.
      *
-     * "Hey !" -> "Hey!"
-     * "wat ?!" -> "wat?!"
-     * "beep & boop" -> "beep & boop"
+     * "Hey !" = "Hey!"
+     * "wat ?!" = "wat?!"
+     * "beep - boop" = "beep - boop"
      *
      * @param sentenceTokens presumably a generated sentence, but you do you
      * @return the same sentence with punctuation reattached and those same

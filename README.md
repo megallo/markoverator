@@ -4,9 +4,9 @@
 
 Backwards/forwards Markov text generator specific to HipChat logs.
 
-Currently the TextUtils can be used to take raw chat sentences and remove the @mentions and URLs (also removes punctuation, but I'm working on that) while leaving the emoticons. 
+Currently the TextUtils can be used to take raw chat sentences and remove the @mentions and URLs while leaving the emoticons.  It can also tokenize or remove punctuation.
 
-Feed the cleaned sentences into the model builder of the generator, and then you can generate sentences. Optionally pass in a seed word and it will generate a sentence with that word somewhere in the middle, or return null if that word doesn't exist in the source model.
+Feed the cleaned sentences into the model builder of [Bigrammer](src/main/java/com/github/megallo/markoverator/Bigrammer.java), and then you can generate sentences. Optionally pass in a seed word and it will generate a sentence with that word somewhere in the middle, or return null if that word doesn't exist in the source model.
 
 The model can be serialized to a file and loaded as needed instead of generating it every time.
 
@@ -29,13 +29,13 @@ Test. Test. Is this thing on?
     <dependency>
       <groupId>com.github.megallo</groupId>
       <artifactId>markoverator</artifactId>
-      <version>1.0.3</version>
+      <version>1.0.4</version>
     </dependency>
 ```
 
 ### Gradle
 ```groovy
-    compile "com.github.megallo:markoverator:1.0.3"
+    compile "com.github.megallo:markoverator:1.0.4"
 ```
 
 ### Building from source

@@ -42,26 +42,37 @@ public class MarkovGenerator {
     private TextUtils textUtils;
 
     /**
-     * Do all the things! Currently takes file name as single argument.
-     * Put the file in src/main/resources and give me the file name without path
+     * Do all the things!
+     * Usage: MarkovGenerator <full path to corpus txt file> <output model file name>
+     *
+     * Hint: there's a sample txt file in root dir, alice.txt
      */
     public static void main(String[] args) throws IOException {
+
+        if (args.length != 2) {
+            loggie.error("Nope!\n\nUsage: MarkovGenerator <full path to corpus txt file> <output model file name>\n\n");
+            return;
+        }
+
         MarkovGenerator mg = new MarkovGenerator();
-        Bigrammer bigrams = new Bigrammer(20);
+        Bigrammer bigrams = new Bigrammer(20); // this number is maximum half-sentence length
 
-        // TODO sample sentence file in project
         bigrams.buildModel(mg.readAndCleanFile(args[0]));
-        bigrams.saveModel(new FileOutputStream(new File("model.kryo")));
-//        bigrams.loadModel(new FileInputStream(new File("model.kryo")));
+        bigrams.saveModel(new FileOutputStream(new File(args[1])));
+//        bigrams.loadModel(new FileInputStream(new File(args[1])));
 
+        // generate totally random sentences
         for (int i = 0; i < 10; i++) {
             List<String> generatedTokens = bigrams.generateRandom();
             loggie.info(mg.postProcess(generatedTokens));
         }
 
-        loggie.info(mg.postProcess(bigrams.generateRandom("(facepalm)")));
-        loggie.info(mg.postProcess(bigrams.generateRandom("bourbon")));
-        loggie.info(mg.postProcess(bigrams.generateRandom("potato")));
+        // generate sentences built around one or two words
+        loggie.info(mg.postProcess(bigrams.generateRandom("Alice")));
+        loggie.info(mg.postProcess(bigrams.generateRandom("questions")));
+        loggie.info(mg.postProcess(bigrams.generateRandom("hookah")));
+        loggie.info(mg.postProcess(bigrams.generateRandom("quite")));
+        loggie.info(mg.postProcess(bigrams.generateRandom("blue", "caterpillar")));
 
     }
 

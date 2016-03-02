@@ -89,13 +89,44 @@ public class Bigrammer {
             throw new RuntimeException("No model generated or loaded");
         }
 
-        List<Integer> allPossibleLocations;
         if (wordIndexMap.containsKey(seedWord)) {
-            allPossibleLocations = wordIndexMap.get(seedWord);
-            return generateRandom(allPossibleLocations.get(random.nextInt(allPossibleLocations.size())));
+            // look up every place this word occurs and pick a random location
+            List<Integer> allPossibleLocations = wordIndexMap.get(seedWord);
+            int chosenRandomLocation = allPossibleLocations.get(random.nextInt(allPossibleLocations.size()));
+
+            // now take that word plus the word immediately following it and start bigrammin'
+            String wordFollowingSeed = model.getFullWordList().get(chosenRandomLocation + 1);
+
+            return generatePhraseWithKnownPair(seedWord, wordFollowingSeed);
         }
 
         // TODO stemming or wordnet to try harder at finding the word
+
+        return null;
+    }
+
+    /**
+     * Attempts to find the exact two-word phrase you're looking for,
+     * and generate a sentence based around it.
+     * @return null if those exact words don't occur together
+     */
+    public List<String> generateRandom(String seedWord1, String seedWord2) {
+        if (model == null) {
+            throw new RuntimeException("No model generated or loaded");
+        }
+
+        List<Integer> allPossibleLocations;
+        if (wordIndexMap.containsKey(seedWord1) && wordIndexMap.containsKey(seedWord2)) {
+            allPossibleLocations = wordIndexMap.get(seedWord1);
+
+            // just brute force it and see if these words occur together as a bigram
+            for (int candidateLocation : allPossibleLocations) {
+                if (model.getFullWordList().get(candidateLocation + 1).equals(seedWord2)) {
+                    // we found these words occurring together, so we're all set
+                    return generatePhraseWithKnownPair(seedWord1, seedWord2);
+                }
+            }
+        }
 
         return null;
     }
@@ -104,6 +135,11 @@ public class Bigrammer {
 
         String w1 = model.getFullWordList().get(seed);
         String w2 = model.getFullWordList().get(seed + 1);
+
+        return generatePhraseWithKnownPair(w1, w2);
+    }
+
+    private List<String> generatePhraseWithKnownPair(String w1, String w2) {
 
         List<String> backwardText = generateBackwardText(w1, w2); // does not include seed word
         List<String> forwardText = generateForwardText(w1, w2);   // includes seed word

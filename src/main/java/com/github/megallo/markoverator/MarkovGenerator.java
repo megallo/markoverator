@@ -43,7 +43,7 @@ public class MarkovGenerator {
 
     /**
      * Do all the things!
-     * Usage: <pre>MarkovGenerator <full path to corpus txt file> <output model file name></pre>
+     * Usage: MarkovGenerator [full path to corpus txt file] [output model file name]
      *
      * Hint: there's a sample txt file in root dir, alice.txt
      */

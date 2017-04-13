@@ -285,6 +285,8 @@ public class Bigrammer {
             return true;
         }
 
+        // TODO where is a good place to check for a period and call this a finished sentence?
+
         // not ready yet, keep going
         return false;
     }
@@ -305,7 +307,9 @@ public class Bigrammer {
                 endWord.equals("she") ||
                 endWord.equals("he")  ||
                 endWord.equals("we")  ||
-                endWord.equals("they"))
+                endWord.equals("they") ||
+                endWord.equals("just") ||   // I don't want to filter out all RB (adverbs), so this is stupid and I want to come up with a smarter thing
+                endWord.endsWith(","))      // in reality this is its own word, but let's not assume that here
                 {
             loggie.info("Rejecting ending of :: {}", endWord);
             return false;

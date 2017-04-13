@@ -35,13 +35,31 @@ public class TextUtils {
     private static final List<String> URL_THINGS =
             Arrays.asList(".com", ".net", ".org", "www", "http", "://");
     private static final List<String> REMOVE_THIS_PUNCTUATION =
-            Arrays.asList("\"", "…");
+            Arrays.asList("\"", "…", "^", "*"); // future me: leave # because issue numbers
     private static final Pattern ENDING_PUNCTUATION_REGEX =
             Pattern.compile("[\\.!\\?,;:]+$");
     private static final Pattern REATTACH_PUNCTUATION_REGEX =
             Pattern.compile("[\\.!\\?,;:]+");
 
-    // TODO handle punctuation instead of pretending it doesn't exist
+    // TODO make a regex to remove logging and stack traces
+
+    /**
+     * Make every word lowercase, with an option to leave special snowflake "I" alone
+     * @param leaveIIntact good ol' capital I, leave it as capital I
+     */
+    public List<String> lowercaseAll(List<String> sentence, boolean leaveIIntact) {
+        ListIterator<String> it = sentence.listIterator();
+        while (it.hasNext()) {
+            String word = it.next();
+            if (leaveIIntact) {
+                if (word.equals("I") || word.equals("I'm") || word.equals("I'll") || word.equals("I've") || word.equals("I'd")) {
+                    continue;
+                }
+            }
+            it.set(word.toLowerCase());
+        }
+        return sentence;
+    }
 
     /**
      * Remove entire words that are reminiscent of URLs.
@@ -61,9 +79,37 @@ public class TextUtils {
     }
 
     /**
+     * Remove mentions that will ping everyone, specifically @here and @all
+     */
+    public List<String> removeHereAllMentions(List<String> sentence) {
+        ListIterator<String> it = sentence.listIterator();
+        while (it.hasNext()) {
+            String word = it.next();
+            if (word.startsWith("@all") || word.startsWith("@here")) {
+                it.remove();
+            }
+        }
+        return sentence;
+    }
+
+    /**
+     * Remove the @ on words starting with '@'
+     */
+    public List<String> removeAtsFromMentions(List<String> sentence) {
+        ListIterator<String> it = sentence.listIterator();
+        while (it.hasNext()) {
+            String word = it.next();
+            if (word.startsWith("@")) {
+                it.set(word.replace("@", ""));
+            }
+        }
+        return sentence;
+    }
+
+    /**
      * Remove words starting with '@'
      */
-    public List<String> removeMentions(List<String> sentence) {
+    public List<String> removeEveryMention(List<String> sentence) {
         ListIterator<String> it = sentence.listIterator();
         while (it.hasNext()) {
             String word = it.next();
@@ -118,7 +164,13 @@ public class TextUtils {
             }
 
             // a smiley face, hooray
-            if (word.equals(":)") || word.equals("(:") || word.equals(";)") || word.toLowerCase().equals(":p")) {
+            if (
+                    word.equals(":)") ||
+                    word.equals("(:") ||
+                    word.equals(";)") ||
+                    word.toLowerCase().equals(":p") ||
+                    word.equals(":-)"))
+            {
                 continue;
             }
 
@@ -162,6 +214,10 @@ public class TextUtils {
         return sentence;
     }
 
+    /**
+     * "Handle" means either remove or space it out into its own word.
+     * Useful when combined with reattachPunctuation()
+     */
     public List<String> handlePunctuation(List<String> sentence) {
         ListIterator<String> it = sentence.listIterator();
 
@@ -170,18 +226,24 @@ public class TextUtils {
 
             // handle parentheses in the parentheses method, not here
 
-            // leave in single quotes, we're ignoring those completely so
+            // leave in single quotes within words, we're ignoring those so
             // possessives and contractions don't get messed up.
             // unless it's standalone, in which case kill it with fire
             if(word.equals("'")) {
                 it.remove();
-                break;
+                continue;
+            }
+
+            if (word.startsWith("'")) {
+                word = word.substring(1);
             }
 
             // remove multi-word-spanning stuff like quotation marks and ellipses
             for (String punc : REMOVE_THIS_PUNCTUATION) {
                 word = word.replace(punc, "");
             }
+
+            // write the modified word back into the list
             it.set(word);
 
             // space out delimiter punctuation like periods and semicolons
@@ -234,6 +296,26 @@ public class TextUtils {
             if (m.matches()) { // we only want exactly all punctuation
                 sentenceTokens.set(i-1, sentenceTokens.get(i-1) + word);
                 sentenceTokens.remove(i);
+            }
+        }
+
+        return sentenceTokens;
+    }
+
+    /**
+     * Capitalize the first letter in the first word of the sentence
+     */
+    public List<String> capitalizeInitialWord(List<String> sentenceTokens) {
+
+        if (sentenceTokens == null) {
+            return null;
+        }
+
+        if (sentenceTokens.size() > 0) {
+            StringBuilder initialWord = new StringBuilder(sentenceTokens.get(0));
+            if (Character.isAlphabetic(initialWord.charAt(0))) {
+                initialWord.setCharAt(0, Character.toUpperCase(initialWord.charAt(0)));
+                sentenceTokens.set(0, initialWord.toString());
             }
         }
 

@@ -55,8 +55,9 @@ public class MarkovGenerator {
         }
 
         MarkovGenerator mg = new MarkovGenerator();
-        Bigrammer bigrams = new Bigrammer(20); // this number is maximum half-sentence length
+        Bigrammer bigrams = new Bigrammer(12); // this number is maximum half-sentence length, does not affect model creation
 
+        loggie.info("Doing things, hang on");
         bigrams.buildModel(mg.readAndCleanFile(args[0]));
         bigrams.saveModel(new FileOutputStream(new File(args[1])));
 //        bigrams.loadModel(new FileInputStream(new File(args[1])));
@@ -81,7 +82,7 @@ public class MarkovGenerator {
     }
 
     public String postProcess(List<String> tokens) {
-        return textUtils.stringify(textUtils.reattachPunctuation(tokens));
+        return textUtils.stringify(textUtils.capitalizeInitialWord(textUtils.reattachPunctuation(tokens)));
     }
 
     private List<List<String>> readAndCleanFile(String filename) throws IOException {
@@ -110,12 +111,16 @@ public class MarkovGenerator {
     private List<String> cleanUpLine(String sentence) {
         String[] split = sentence.split("\\s+"); // break on whitespace
         List<String> splitSentence = new LinkedList<>(Arrays.asList(split));
-        splitSentence = textUtils.removeBotCommands(splitSentence);
+        splitSentence = textUtils.lowercaseAll(splitSentence, true);
+//        splitSentence = textUtils.removeBotCommands(splitSentence); // I moved this to the hipchat extractor
         splitSentence = textUtils.removeUrls(splitSentence);
-        splitSentence = textUtils.removeMentions(splitSentence);
         splitSentence = textUtils.removeExplicitNewlines(splitSentence);
-        splitSentence = textUtils.removeUnmatchedParentheses(splitSentence);
         splitSentence = textUtils.handlePunctuation(splitSentence);
+        // remove parentheses after punctuation
+        splitSentence = textUtils.removeUnmatchedParentheses(splitSentence);
+        // order matters! get rid of punctuation first so we can find things like (@zeus
+        splitSentence = textUtils.removeHereAllMentions(splitSentence);
+        splitSentence = textUtils.removeAtsFromMentions(splitSentence);
         splitSentence = textUtils.removeEmptyWords(splitSentence);
 
         if (loggie.isDebugEnabled()) {

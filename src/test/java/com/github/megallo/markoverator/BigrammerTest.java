@@ -48,11 +48,13 @@ public class BigrammerTest {
         List<String> nope = Arrays.asList("who found the lamp ? it was I".split(" "));
         List<String> nope2 = Arrays.asList("what kind of thing is her".split(" "));
         List<String> nope3 = Arrays.asList("what kind of thing is this and".split(" "));
+        List<String> nope4 = Arrays.asList("what kind of thing is this and just".split(" "));
 
         Assert.assertTrue(bigrammer.isDecentEndingWord(yep));
         Assert.assertTrue(bigrammer.isDecentEndingWord(yep2));
         Assert.assertFalse(bigrammer.isDecentEndingWord(nope));
         Assert.assertFalse(bigrammer.isDecentEndingWord(nope2));
         Assert.assertFalse(bigrammer.isDecentEndingWord(nope3));
+        Assert.assertFalse(bigrammer.isDecentEndingWord(nope4));
     }
 }

@@ -17,12 +17,13 @@
 package com.github.megallo.markoverator;
 
 import com.github.megallo.markoverator.utils.TextUtils;
-import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.List;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
 
 public class TextUtilTest {
 
@@ -31,6 +32,26 @@ public class TextUtilTest {
     @Before
     public void setUp() throws Exception {
         textUtils = new TextUtils();
+    }
+
+    @Test
+    public void testLowercase() {
+        String original = "Hey I am Here";
+        List<String> split = new LinkedList<>();
+        split.add("hey");
+        split.add("i");
+        split.add("am");
+        split.add("here");
+
+        Assert.assertEquals(split, textUtils.lowercaseAll(new LinkedList<>(Arrays.asList(original.split("\\s+"))), false));
+
+        split = new LinkedList<>();
+        split.add("hey");
+        split.add("I");
+        split.add("am");
+        split.add("here");
+
+        Assert.assertEquals(split, textUtils.lowercaseAll(new LinkedList<>(Arrays.asList(original.split("\\s+"))), true));
     }
 
     @Test
@@ -46,24 +67,37 @@ public class TextUtilTest {
 
     @Test
     public void testRemoveMentions() {
-        String withUrl = "go see @jack, ok?";
-        List<String> withoutUrl = new LinkedList<>();
-        withoutUrl.add("go");
-        withoutUrl.add("see");
-        withoutUrl.add("ok?");
+        String original = "go see @jack, ok?";
+        List<String> split = new LinkedList<>();
+        split.add("go");
+        split.add("see");
+        split.add("ok?");
 
-        Assert.assertEquals(withoutUrl, textUtils.removeMentions(new LinkedList<>(Arrays.asList(withUrl.split("\\s+")))));
+        Assert.assertEquals(split, textUtils.removeEveryMention(new LinkedList<>(Arrays.asList(original.split("\\s+")))));
+    }
+
+    @Test
+    public void testRemoveHereAllMentions() {
+        String original = "@here go see @jack, ok?";
+        List<String> split = new LinkedList<>();
+        split.add("go");
+        split.add("see");
+        split.add("@jack,");
+        split.add("ok?");
+
+        Assert.assertEquals(split, textUtils.removeHereAllMentions(new LinkedList<>(Arrays.asList(original.split("\\s+")))));
+
     }
 
     @Test
     public void testRemoveNewlines() {
-        String withUrl = "go see, ok?\\n";
-        List<String> withoutUrl = new LinkedList<>();
-        withoutUrl.add("go");
-        withoutUrl.add("see,");
-        withoutUrl.add("ok? ");
+        String original = "go see, ok?\\n";
+        List<String> split = new LinkedList<>();
+        split.add("go");
+        split.add("see,");
+        split.add("ok? ");
 
-        Assert.assertEquals(withoutUrl, textUtils.removeExplicitNewlines(new LinkedList<>(Arrays.asList(withUrl.split("\\s+")))));
+        Assert.assertEquals(split, textUtils.removeExplicitNewlines(new LinkedList<>(Arrays.asList(original.split("\\s+")))));
     }
 
     @Test
@@ -83,7 +117,7 @@ public class TextUtilTest {
 
     @Test
     public void testRemoveParens() {
-        String withParens = "(go see, ok?) (awthanks) :) ;) :P";
+        String withParens = "(go see, ok?) (awthanks) :) ;) :P :-)";
         List<String> withoutParens = new LinkedList<>();
         withoutParens.add("go");
         withoutParens.add("see,");
@@ -92,6 +126,7 @@ public class TextUtilTest {
         withoutParens.add(":)");
         withoutParens.add(";)");
         withoutParens.add(":P");
+        withoutParens.add(":-)");
 
         Assert.assertEquals(withoutParens, textUtils.removeUnmatchedParentheses(Arrays.asList(withParens.split("\\s+"))));
     }
@@ -132,15 +167,19 @@ public class TextUtilTest {
 
     @Test
     public void testHandlePunctuationRemoval() {
-        String orig = "\"what?\" nope, (disappear) '";
+        String orig = "\"what?\" 'hey nope, (disappear) ' 'whatevs (facepalm),";
         LinkedList<String> origSplit = new LinkedList<>(Arrays.asList(orig.split("\\s+")));
 
         List<String> fixedPunc = new LinkedList<>();
         fixedPunc.add("what");
         fixedPunc.add("?");
+        fixedPunc.add("hey");
         fixedPunc.add("nope");
         fixedPunc.add(",");
         fixedPunc.add("(disappear)");
+        fixedPunc.add("whatevs");
+        fixedPunc.add("(facepalm)");
+        fixedPunc.add(",");
 
         Assert.assertEquals(fixedPunc, textUtils.handlePunctuation(origSplit));
     }
@@ -184,5 +223,31 @@ public class TextUtilTest {
         List<String> fixedPunc = null;
 
         Assert.assertEquals(fixedPunc, textUtils.reattachPunctuation(origSplit));
+    }
+
+    @Test
+    public void testInitCaps() {
+        String lower = "hey what";
+        List<String> upper = new LinkedList<>();
+        upper.add("Hey");
+        upper.add("what");
+
+        Assert.assertEquals(upper, textUtils.capitalizeInitialWord(new LinkedList<>(Arrays.asList(lower.split("\\s+")))));
+
+    }
+
+    @Test
+    public void testRemoveAts() {
+        String orig = "hey @boop what is @foop doing";
+        List<String> fixed = new LinkedList<>();
+        fixed.add("hey");
+        fixed.add("boop");
+        fixed.add("what");
+        fixed.add("is");
+        fixed.add("foop");
+        fixed.add("doing");
+
+        Assert.assertEquals(fixed, textUtils.removeAtsFromMentions(new LinkedList<>(Arrays.asList(orig.split("\\s+")))));
+
     }
 }

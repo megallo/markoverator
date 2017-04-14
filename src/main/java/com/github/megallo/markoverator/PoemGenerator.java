@@ -37,8 +37,13 @@ public class PoemGenerator {
     private static final Logger loggie = LoggerFactory.getLogger(PoemGenerator.class);
 
     static TextUtils textUtils = new TextUtils(); // TODO
-    Poet poet = new Poet();
     Bigrammer bigrams = new Bigrammer(7);
+
+    // TODO move the resources to their own module
+    private final String cmuDictLocation = "/poet/cmudict-0.7b.txt";
+    private final String myDictLocation = "/poet/extras-dict.txt";
+    private final String phonemeLocation = "/poet/cmudict-0.7b-phones.txt";
+    private final String symbolsLocation = "/poet/cmudict-0.7b-symbols.txt";
 
     public static void main(String[] args) throws IOException {
         if (args.length != 2) {
@@ -51,8 +56,7 @@ public class PoemGenerator {
 
     public void doStuff(String targetWord, String modelLocation) throws IOException {
         loggie.info("Loading rhyme dictionary");
-        poet.initialize();
-
+        Poet poet = new Poet(cmuDictLocation, phonemeLocation, symbolsLocation, myDictLocation);
 
         loggie.info("Loading markov model");
         // example model creation is shown in MarkovGenerator
@@ -60,7 +64,7 @@ public class PoemGenerator {
 
         // first, make sure our target word is in the model. Otherwise, how do we even know what we're talking about?
         String poemTopicWord = targetWord.toLowerCase();
-        String topicPoemLine;
+        String topicPoemLine; // bonus: keep the line and use it in the poem
         if ((topicPoemLine = makePoemLine(poemTopicWord)) == null) {
             loggie.info("I don't know about {} :/", poemTopicWord);
             return;
@@ -74,7 +78,7 @@ public class PoemGenerator {
             return;
         }
 
-        loggie.info(rhymingWords.toString());
+        loggie.debug(rhymingWords.toString());
 
         Collections.shuffle(rhymingWords);
 

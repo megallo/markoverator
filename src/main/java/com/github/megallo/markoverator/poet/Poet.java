@@ -17,6 +17,7 @@
 package com.github.megallo.markoverator.poet;
 
 import com.github.megallo.markoverator.PoemGenerator;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,12 +40,6 @@ public class Poet {
 
     private static final Logger loggie = LoggerFactory.getLogger(PoemGenerator.class);
 
-    // TODO pass this in?
-    // TODO move the resources to their own module
-    private final String cmuDictLocation = "/poet/cmudict-0.7b.txt";
-    private final String myDictLocation = "/poet/extras-dict.txt";
-    private final String phonemeLocation = "/poet/cmudict-0.7b-phones.txt";
-    private final String symbolsLocation = "/poet/cmudict-0.7b-symbols.txt";
     private final static String cmuDictComment = ";;;";
 
     Map<String, List<String>> wordPhonemes = new HashMap<>();
@@ -54,10 +49,20 @@ public class Poet {
     // TODO make that configurable in case memory is an issue?
     Map<String, List<String>> endingPhonemesWords = new HashMap<>();
 
-    public void initialize() throws IOException {
-        populatePhonemes(phonemeLocation, symbolsLocation); // do this first to get the vowels
-        populateCmuMap(cmuDictLocation);
-        populateCmuMap(myDictLocation);
+    public Poet(String cmuDictLocation, String cmuPhonesLocation, String cmuSymbolsLocation) {
+        this(cmuDictLocation, cmuPhonesLocation, cmuSymbolsLocation, null);
+    }
+
+    public Poet(String cmuDictLocation, String cmuPhonesLocation, String cmuSymbolsLocation, String extraDictLocation) {
+        try {
+            populatePhonemes(cmuPhonesLocation, cmuSymbolsLocation); // do this first to get the vowels
+            populateCmuMap(cmuDictLocation);
+            if (extraDictLocation != null) {
+                populateCmuMap(extraDictLocation);
+            }
+        } catch (IOException e) {
+            loggie.error("Unable to load CMU files", e);
+        }
         loggie.info("Loaded rhyme dictionary; found {} words", wordPhonemes.size());
     }
 
@@ -155,17 +160,18 @@ public class Poet {
         loggie.info(vowels.toString());
     }
 
-    // TODO improvement: if the word ends with a vowel, grab the next phoneme up. e.g. karlie/balcony
     /**
      * Extract the section to rhyme with. This is probably the last few letters
      * up to and including the last vowel
      * @param phonemeList for this word
      */
-    private String getRhymingSection(List<String> phonemeList) {
+    @VisibleForTesting
+    String getRhymingSection(List<String> phonemeList) {
         StringBuilder rhymeMe = new StringBuilder();
         Stack<String> rhymeMeStack = new Stack<>();
         // walk the list backwards until we find the last vowel
-        for (int i = phonemeList.size() - 1; i >= 0; i--) {
+        int i;
+        for (i = phonemeList.size() - 1; i >= 0; i--) {
             String pho = phonemeList.get(i);
             rhymeMeStack.push(pho);
             if (vowels.contains(pho)) {
@@ -174,9 +180,19 @@ public class Poet {
             }
         }
 
-        // I keep thinking stacks are what I want, but they still append to the back, so it's still just reverse traversal
-        // pop so they're in the right order
+        // TODO I googled and this is a "single" rhyme. If possible, make more extractions to try for double and dactylic rhymes
+
+        if (rhymeMeStack.size() == 1) { // this means we only pulled off the last phoneme and it was a vowel
+            // so just grab one more if available
+            i = phonemeList.size() - 2;
+            if (i >= 0) {
+                rhymeMeStack.push(phonemeList.get(i));
+            }
+        }
+
+        // stacks still append to the back, so it's just less annoying reverse traversal
         while (!rhymeMeStack.empty()) {
+            // pop so they're in the right order
             rhymeMe.append(rhymeMeStack.pop());
         }
         return rhymeMe.toString();

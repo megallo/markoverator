@@ -16,29 +16,83 @@
 
 package com.github.megallo.markoverator;
 
+import com.google.common.collect.Lists;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
+
 import java.util.Arrays;
 import java.util.List;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+
+import static com.github.megallo.markoverator.Bigrammer.DELIM;
 
 public class BigrammerTest {
 
-    Bigrammer bigrammer;
+    static Bigrammer bigrammer;
 
-    @Before
-    public void setup() {
+    @BeforeClass
+    public static void setup() {
         bigrammer = new Bigrammer();
         bigrammer.buildModel(Arrays.asList(
-                Arrays.asList("howdy", "y'all", ".", "How", "are", "ya", "?"),
-                Arrays.asList("howdy", "pardner")
+                Arrays.asList("howdy", "y'all", ".", "How", "are", "ya", "?", DELIM),
+                Arrays.asList(DELIM, "howdy", "pardner", DELIM)
         ));
+    }
+
+    @Test
+    public void testSentenceGeneration() {
+        List<String> expected = Lists.newArrayList("howdy", "y'all", ".", "How", "are", "ya", "?");
+        List<String> generated = bigrammer.generatePhraseWithKnownPair("How", "are");
+        Assert.assertEquals(expected, generated);
+
+        expected = Lists.newArrayList("howdy", "pardner");
+        generated = bigrammer.generatePhraseWithKnownPair("howdy", "pardner");
+         Assert.assertEquals(expected, generated);
+    }
+
+    @Test
+    public void testForwardsSentenceGeneration() {
+        List<String> expected = Lists.newArrayList("How", "are", "ya", "?");
+        List<String> generated = bigrammer.generateRandomForwards("How");
+        Assert.assertEquals(expected, generated);
+
+        expected = Lists.newArrayList("pardner");
+        generated = bigrammer.generateRandomForwards("pardner");
+         Assert.assertEquals(expected, generated);
+    }
+
+    @Test
+    public void testBackwardsSentenceGeneration() {
+        List<String> expected = Lists.newArrayList("howdy", "y'all", ".", "How", "are");
+        List<String> generated = bigrammer.generateRandomBackwards("are");
+        Assert.assertEquals(expected, generated);
+
+        expected = Lists.newArrayList("howdy", "pardner");
+        generated = bigrammer.generateRandomBackwards("pardner");
+         Assert.assertEquals(expected, generated);
+    }
+
+    @Test
+    public void testForwardGeneration() {
+        List<String> expected = Lists.newArrayList("How", "are", "ya", "?");
+        List<String> forward = bigrammer.generateForwardText("How", "are");
+        Assert.assertEquals(expected, forward);
+    }
+
+    @Test
+    public void testBackwardsGeneration() {
+        List<String> expected = Lists.newArrayList("howdy", "y'all", ".", "How", "are");
+        List<String> back = bigrammer.generateBackwardText("How", "are");
+        Assert.assertEquals(expected, back);
     }
 
     @Test
     public void testSeedWordBehavior() {
         Assert.assertNotNull(bigrammer.generateRandom("howdy"));
+        Assert.assertNotNull(bigrammer.getAnyLocationOfSeed("howdy"));
+
         Assert.assertNull(bigrammer.generateRandom("asdfpoiu123456789||Dffesd"));
+        Assert.assertNull(bigrammer.getAnyLocationOfSeed("asdfpoiu123456789||Dffesd"));
     }
 
     @Test

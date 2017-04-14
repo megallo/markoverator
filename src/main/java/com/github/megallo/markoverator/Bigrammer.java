@@ -22,6 +22,7 @@ import com.esotericsoftware.kryo.io.Output;
 import com.github.megallo.markoverator.utils.BigramModel;
 import com.github.megallo.markoverator.utils.Pair;
 import com.github.megallo.markoverator.utils.PartOfSpeechUtils;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,7 +48,7 @@ public class Bigrammer {
     private Random random = new Random();
 
     private int maxHalfLength = 8;
-    private final static String DELIM = "<DELIM>";
+    final static String DELIM = "<DELIM>";
 
     private BigramModel model = null;
     private Map<String, List<Integer>> wordIndexMap; // calculated, so not part of the model object
@@ -70,6 +71,7 @@ public class Bigrammer {
 
         int seed;
         do {
+            // if you start too close to the end, you'll fall off it
             seed = random.nextInt(model.getFullWordList().size() - 3);
             // keep trying until we get a reasonable starting point
         } while (model.getFullWordList().get(seed).equals(DELIM) || model.getFullWordList().get(seed).equals(DELIM));
@@ -89,13 +91,12 @@ public class Bigrammer {
             throw new RuntimeException("No model generated or loaded");
         }
 
-        if (wordIndexMap.containsKey(seedWord)) {
-            // look up every place this word occurs and pick a random location
-            List<Integer> allPossibleLocations = wordIndexMap.get(seedWord);
-            int chosenRandomLocation = allPossibleLocations.get(random.nextInt(allPossibleLocations.size()));
+        Integer chosenRandomLocation = getAnyLocationOfSeed(seedWord);
 
+        if (chosenRandomLocation != null) {
             // now take that word plus the word immediately following it and start bigrammin'
             String wordFollowingSeed = model.getFullWordList().get(chosenRandomLocation + 1);
+            // TODO there is no guarantee the next word is not <DELIM>, which can cause mistaken pairing once those are removed
 
             return generatePhraseWithKnownPair(seedWord, wordFollowingSeed);
         }
@@ -103,6 +104,68 @@ public class Bigrammer {
         // TODO stemming or wordnet to try harder at finding the word
 
         return null;
+    }
+
+    /**
+     * Attempts to find the exact word you're looking for,
+     * and generate a sentence starting with that word.
+     * Max half length is the actual whole length since this is the back half of a sentence
+     * @return null if exact string is not found
+     */
+    public List<String> generateRandomForwards(String seedWord) {
+        if (model == null) {
+            throw new RuntimeException("No model generated or loaded");
+        }
+
+        Integer chosenRandomLocation = getAnyLocationOfSeed(seedWord);
+
+        if (chosenRandomLocation != null) {
+            // now take that word plus the word immediately following it and start bigrammin'
+            String wordFollowingSeed = model.getFullWordList().get(chosenRandomLocation + 1);
+
+            return generateForwardText(seedWord, wordFollowingSeed);
+        }
+
+        // TODO stemming or wordnet to try harder at finding the word
+
+        return null;
+    }
+
+    /**
+     * Attempts to find the exact word you're looking for,
+     * and generate a sentence ending with that word.
+     * Useful if you're trying to make poetry.
+     * Max half length is the actual whole length since this is the front half of a sentence
+     * @return null if exact string is not found
+     */
+    public List<String> generateRandomBackwards(String seedWord) {
+        if (model == null) {
+            throw new RuntimeException("No model generated or loaded");
+        }
+
+        Integer chosenRandomLocation = getAnyLocationOfSeed(seedWord);
+
+        if (chosenRandomLocation != null) {
+            // now take that word plus the word immediately before it and start bigrammin'
+            String wordBeforeSeed = model.getFullWordList().get(chosenRandomLocation - 1);
+
+            return generateBackwardText(wordBeforeSeed, seedWord);
+        }
+
+        // TODO stemming or wordnet to try harder at finding the word
+
+        return null;
+    }
+
+    @VisibleForTesting
+    Integer getAnyLocationOfSeed(String seedWord) {
+
+        if (wordIndexMap.containsKey(seedWord)) {
+            // look up every place this word occurs and pick a random location
+            List<Integer> allPossibleLocations = wordIndexMap.get(seedWord);
+            return allPossibleLocations.get(random.nextInt(allPossibleLocations.size()));
+        }
+        return null; // it's not in this model
     }
 
     /**
@@ -139,19 +202,20 @@ public class Bigrammer {
         return generatePhraseWithKnownPair(w1, w2);
     }
 
-    private List<String> generatePhraseWithKnownPair(String w1, String w2) {
+    @VisibleForTesting
+    List<String> generatePhraseWithKnownPair(String w1, String w2) {
 
-        List<String> backwardText = generateBackwardText(w1, w2); // does not include seed word
-        List<String> forwardText = generateForwardText(w1, w2);   // includes seed word
-        backwardText.addAll(forwardText);// and mush 'em together
-        backwardText.removeAll(Lists.newArrayList(DELIM));
+        List<String> backwardText = generateBackwardText(w1, w2); // includes seed words at end
+        List<String> forwardText = generateForwardText(w1, w2);   // includes seed words at beginning
 
-        // backwardText is now the entire thing
+        List<String> finalText = backwardText.subList(0, backwardText.size() - 2); // remove seed words
+        finalText.addAll(forwardText); // and mush 'em together
 
-        return backwardText;
+        return finalText;
     }
 
-    private List<String> generateForwardText(String word1, String word2) {
+    @VisibleForTesting
+    List<String> generateForwardText(String word1, String word2) {
         List<String> generated = Lists.newArrayList(word1, word2);
 
         // loops until we reach a size we like, or the content reaches a good stopping point
@@ -179,10 +243,12 @@ public class Bigrammer {
 
         }
 
+        generated.removeAll(Lists.newArrayList(DELIM));
         return generated;
     }
 
-    private List<String> generateBackwardText(String word2, String word3) {
+    @VisibleForTesting
+    List<String> generateBackwardText(String word2, String word3) {
         Stack<String> generated = new Stack<>();
         while (generated.size() <= maxHalfLength) {
             generated.push(word3);
@@ -197,14 +263,8 @@ public class Bigrammer {
         }
         generated.push(word2);
 
-        ArrayList<String> forwardList = new ArrayList<>();
-
-        // don't include the original two words, as they will be in the forward text
-        // it's easier to do it here because we know what the data structure is
-        for (int i = 2; i < generated.size();) {
-            forwardList.add(generated.pop());
-        }
-        return forwardList;
+        generated.removeAll(Lists.newArrayList(DELIM));
+        return Lists.reverse(generated);
     }
 
     /**

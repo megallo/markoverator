@@ -69,12 +69,22 @@ public class MarkovGenerator {
         }
 
         // generate sentences built around one or two words
-        loggie.info(mg.postProcess(bigrams.generateRandom("Alice")));
         loggie.info(mg.postProcess(bigrams.generateRandom("questions")));
         loggie.info(mg.postProcess(bigrams.generateRandom("hookah")));
         loggie.info(mg.postProcess(bigrams.generateRandom("quite")));
         loggie.info(mg.postProcess(bigrams.generateRandom("blue", "caterpillar")));
+        loggie.info(mg.postProcess(bigrams.generateRandom("white", "rabbit")));
 
+        // generate sentences that starts with a given word
+        loggie.info(mg.postProcess(bigrams.generateRandomForwards("alice")));
+        loggie.info(mg.postProcess(bigrams.generateRandomForwards("she")));
+        loggie.info(mg.postProcess(bigrams.generateRandomForwards("they")));
+
+        // generate a poem
+        // the max half size will be the actual max length. shorter is nice here
+        loggie.info(mg.postProcess(bigrams.generateRandomBackwards("find")));
+        loggie.info(mg.postProcess(bigrams.generateRandomBackwards("kind")));
+        loggie.info(mg.postProcess(bigrams.generateRandomBackwards("mind")));
     }
 
     public MarkovGenerator() {

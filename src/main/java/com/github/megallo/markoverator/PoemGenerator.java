@@ -71,6 +71,7 @@ public class PoemGenerator {
 
         if (rhymingWords == null) {
             loggie.info("I don't know what rhymes with {} :(", poemTopicWord);
+            return;
         }
 
         loggie.info(rhymingWords.toString());

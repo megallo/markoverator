@@ -26,8 +26,11 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.Stack;
 
 /**
  * Find words that rhyme using cmuDict
@@ -40,16 +43,19 @@ public class Poet {
     // TODO move the resources to their own module
     private final String cmuDictLocation = "/poet/cmudict-0.7b.txt";
     private final String myDictLocation = "/poet/extras-dict.txt";
-    private final String phonenemeLocation = "/poet/cmudict-0.7b-phones.txt";
+    private final String phonemeLocation = "/poet/cmudict-0.7b-phones.txt";
+    private final String symbolsLocation = "/poet/cmudict-0.7b-symbols.txt";
     private final static String cmuDictComment = ";;;";
 
     Map<String, List<String>> wordPhonemes = new HashMap<>();
+    Set<String> vowels = new HashSet<>();
 
     // TODO make a bunch of maps populated with n last phonemes depending on word length?
     // TODO make that configurable in case memory is an issue?
     Map<String, List<String>> endingPhonemesWords = new HashMap<>();
 
     public void initialize() throws IOException {
+        populatePhonemes(phonemeLocation, symbolsLocation); // do this first to get the vowels
         populateCmuMap(cmuDictLocation);
         populateCmuMap(myDictLocation);
         loggie.info("Loaded rhyme dictionary; found {} words", wordPhonemes.size());
@@ -59,17 +65,12 @@ public class Poet {
         if (wordPhonemes.containsKey(targetWord.toLowerCase())) {
             List<String> targetPhonemes = wordPhonemes.get(targetWord.toLowerCase());
 
-            // TODO here is a case where you'd need to iterate if you have multiple length phoneme hash mashes
-            if (targetPhonemes.size() >= 2) {
-                String targetPhonemeMash = targetPhonemes.get(targetPhonemes.size() - 2) + targetPhonemes.get(targetPhonemes.size() - 1);
-                if (endingPhonemesWords.containsKey(targetPhonemeMash)) {
-                    // we have things that rhyme!
-                    loggie.info("Found {} words that rhyme with {}", endingPhonemesWords.get(targetPhonemeMash).size(), targetWord);
-                    return endingPhonemesWords.get(targetPhonemeMash);
-                }
-            } else {
-                // ??? this is a one-phoneme word, now what
-                // TODO
+            // be sure to use the same phoneme ending algorithm for both insertion and lookup
+            String targetPhonemeMash = getRhymingSection(targetPhonemes);
+            if (endingPhonemesWords.containsKey(targetPhonemeMash)) {
+                // we have things that rhyme!
+                loggie.info("Found {} words that rhyme with {}", endingPhonemesWords.get(targetPhonemeMash).size(), targetWord);
+                return endingPhonemesWords.get(targetPhonemeMash);
             }
         }
 
@@ -92,18 +93,13 @@ public class Poet {
                     // pronunciations, but I want all of them to be stored in the reverse lookup map. I think that's ok?
                     wordPhonemes.put(word, phonemes);
 
-                    // TODO these are the last two phonemes, but maybe configurable? Last n?
-                    String lastNPhonemes = split[split.length - 1];
-                    if (split.length > 2) {
-                        lastNPhonemes = split[split.length - 2] + lastNPhonemes; // just straight up smush 'em together
-                    }
+                    String lastNPhonemes = getRhymingSection(phonemes);
 
                     List<String> wordsForThisPhoneme;
                     if (endingPhonemesWords.containsKey(lastNPhonemes)) {
                         wordsForThisPhoneme = endingPhonemesWords.get(lastNPhonemes);
                     } else {
                         wordsForThisPhoneme = new ArrayList<>();
-                        // TODO make sure this does the thing
                         endingPhonemesWords.put(lastNPhonemes, wordsForThisPhoneme);
                     }
                     // TODO remove punctuation from words, e.g. PRESTIGIOUS(1)
@@ -121,8 +117,69 @@ public class Poet {
         return split[0];
     }
 
-    private void populatePhonemes(String filename) {
-        // TODO load up all the vowels, then we can look for the last vowel in the word and try to rhyme that
+    private void populatePhonemes(String phonemesFileName, String symbolsFilename) throws IOException {
+        List<String> allSymbols = new ArrayList<>();
+
+        // read the symbols and then transfer them into the vowels set based on the phonemes input
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(Poet.class.getResourceAsStream(symbolsFilename)))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (!line.startsWith(cmuDictComment)) {
+                    allSymbols.add(line.trim());
+                }
+            }
+        }
+
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(Poet.class.getResourceAsStream(phonemesFileName)))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (!line.startsWith(cmuDictComment)) {
+                    String[] split = line.split("\\s+");// break on whitespace
+                    String phonemeBase = split[0];
+                    String phonemeType = split[1];
+                    if (phonemeType.equals("vowel")) {
+                        for (String symbol : allSymbols) {
+                            // symbols are like AA1 and EH0 but phoneme-to-type mapping is AA EH
+                            // so if the unique symbols start with a base that's marked as a vowel
+                            // add it to the master vowel lookup set
+                            // that way later we don't have to do a .startsWith() comparison on every word's phonemes
+                            if (symbol.startsWith(phonemeBase)) {
+                                vowels.add(symbol);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        loggie.info(vowels.toString());
+    }
+
+    // TODO improvement: if the word ends with a vowel, grab the next phoneme up. e.g. karlie/balcony
+    /**
+     * Extract the section to rhyme with. This is probably the last few letters
+     * up to and including the last vowel
+     * @param phonemeList for this word
+     */
+    private String getRhymingSection(List<String> phonemeList) {
+        StringBuilder rhymeMe = new StringBuilder();
+        Stack<String> rhymeMeStack = new Stack<>();
+        // walk the list backwards until we find the last vowel
+        for (int i = phonemeList.size() - 1; i >= 0; i--) {
+            String pho = phonemeList.get(i);
+            rhymeMeStack.push(pho);
+            if (vowels.contains(pho)) {
+                // we did it
+                break;
+            }
+        }
+
+        // I keep thinking stacks are what I want, but they still append to the back, so it's still just reverse traversal
+        // pop so they're in the right order
+        while (!rhymeMeStack.empty()) {
+            rhymeMe.append(rhymeMeStack.pop());
+        }
+        return rhymeMe.toString();
     }
 
 }

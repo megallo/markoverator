@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.github.megallo.markoverator;
+package com.github.megallo.markoverator.bigrammer;
 
 import com.google.common.collect.Lists;
 import org.junit.Assert;
@@ -24,7 +24,7 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.List;
 
-import static com.github.megallo.markoverator.Bigrammer.DELIM;
+import static com.github.megallo.markoverator.bigrammer.Bigrammer.DELIM;
 
 public class BigrammerTest {
 

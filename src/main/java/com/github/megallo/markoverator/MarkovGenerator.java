@@ -16,7 +16,11 @@
 
 package com.github.megallo.markoverator;
 
+import com.github.megallo.markoverator.bigrammer.Bigrammer;
 import com.github.megallo.markoverator.utils.TextUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -28,8 +32,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 
 /**

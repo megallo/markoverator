@@ -1,4 +1,6 @@
-package com.github.megallo.markoverator.utils;
+package com.github.megallo.markoverator.bigrammer;
+
+import com.github.megallo.markoverator.utils.Pair;
 
 import java.util.HashMap;
 import java.util.List;

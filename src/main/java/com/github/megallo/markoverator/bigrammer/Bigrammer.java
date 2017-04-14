@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 
-package com.github.megallo.markoverator;
+package com.github.megallo.markoverator.bigrammer;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
-import com.github.megallo.markoverator.utils.BigramModel;
 import com.github.megallo.markoverator.utils.Pair;
 import com.github.megallo.markoverator.utils.PartOfSpeechUtils;
 import com.google.common.annotations.VisibleForTesting;
@@ -138,6 +137,7 @@ public class Bigrammer {
      * Max half length is the actual whole length since this is the front half of a sentence
      * @return null if exact string is not found
      */
+    // TODO it would be handy for poems if we could give this a suggested length directly
     public List<String> generateRandomBackwards(String seedWord) {
         if (model == null) {
             throw new RuntimeException("No model generated or loaded");

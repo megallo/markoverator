@@ -12,9 +12,15 @@ The model can be serialized to a file and loaded as needed instead of generating
 
 Example usage can be found in the [MarkovGenerator](src/main/java/com/github/megallo/markoverator/MarkovGenerator.java) class. A sample corpus, Alice in Wonderland, is in the root directory as `alice.txt`. 
 
+Protip: Make a poem by using the backwards generator!
+
 :sparkles: I use a quick 'n dirty python script to preprocess the hipchat export. I'll put it up here in a future release.
 
-#### New in 1.0.5 :exclamation:
+#### New in 2.0.0 :exclamation:
+- Ability to generate either forwards-only or backwards-only sentences from single seed word
+- Even more text utils
+
+#### New in 1.0.5
 - Ability to generate a phrase around two seed words instead of just one
 - Sample corpus for trying out model building
 
@@ -36,13 +42,13 @@ Test. Test. Is this thing on?
     <dependency>
       <groupId>com.github.megallo</groupId>
       <artifactId>markoverator</artifactId>
-      <version>1.0.5</version>
+      <version>2.0.0</version>
     </dependency>
 ```
 
 ### Gradle
 ```groovy
-    compile "com.github.megallo:markoverator:1.0.5"
+    compile "com.github.megallo:markoverator:2.0.0"
 ```
 
 ### Building from source

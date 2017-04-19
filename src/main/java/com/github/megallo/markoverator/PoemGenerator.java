@@ -39,12 +39,8 @@ public class PoemGenerator {
     static TextUtils textUtils = new TextUtils(); // TODO
     Bigrammer bigrams = new Bigrammer(7);
 
-    // TODO move the resources to their own module
-    private final String cmuDictLocation = "/com/github/megallo/markoverator/poet/cmudict-0.7b.txt";
-    private final String myDictLocation = "/com/github/megallo/markoverator/poet/extras-dict.txt";
-    private final String phonemeLocation = "/com/github/megallo/markoverator/poet/cmudict-0.7b-phones.txt";
-    private final String symbolsLocation = "/com/github/megallo/markoverator/poet/cmudict-0.7b-symbols.txt";
-
+    // TODO I think I want a helper class that accepts a model, poem length, and line max length
+    // to do all this for you
     public static void main(String[] args) throws IOException {
         if (args.length != 2) {
             loggie.error("Nope!\n\nUsage: PoemGenerator <full path to model file> <word to make a poem from>\n\n");
@@ -56,7 +52,7 @@ public class PoemGenerator {
 
     public void doStuff(String targetWord, String modelLocation) throws IOException {
         loggie.info("Loading rhyme dictionary");
-        Poet poet = new Poet(cmuDictLocation, phonemeLocation, symbolsLocation, myDictLocation);
+        Poet poet = new Poet();
 
         loggie.info("Loading markov model");
         // example model creation is shown in MarkovGenerator

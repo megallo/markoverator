@@ -24,6 +24,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -40,6 +41,11 @@ public class Poet {
 
     private static final Logger loggie = LoggerFactory.getLogger(PoemGenerator.class);
 
+    public static final String cmuDictLocation = "/com/github/megallo/markoverator/poet/cmudict-0.7b.txt";
+    public static final String cmuPhonemeLocation = "/com/github/megallo/markoverator/poet/cmudict-0.7b-phones.txt";
+    public static final String cmuSymbolsLocation = "/com/github/megallo/markoverator/poet/cmudict-0.7b-symbols.txt";
+    public static final String myDictLocation = "/com/github/megallo/markoverator/poet/extras-dict.txt";
+
     private final static String cmuDictComment = ";;;";
 
     Map<String, List<String>> wordPhonemes = new HashMap<>();
@@ -49,16 +55,37 @@ public class Poet {
     // TODO make that configurable in case memory is an issue?
     Map<String, List<String>> endingPhonemesWords = new HashMap<>();
 
-    public Poet(String cmuDictLocation, String cmuPhonesLocation, String cmuSymbolsLocation) {
-        this(cmuDictLocation, cmuPhonesLocation, cmuSymbolsLocation, null);
+    /**
+     * Default constructor if you just want the CMU dictionaries
+     */
+    public Poet() {
+        initializeDictionaries(cmuDictLocation, cmuPhonemeLocation, cmuSymbolsLocation, myDictLocation);
     }
 
-    public Poet(String cmuDictLocation, String cmuPhonesLocation, String cmuSymbolsLocation, String extraDictLocation) {
+    public Poet(InputStream cmuDictStream, InputStream cmuPhonesStream, InputStream cmuSymbolsStream, InputStream extraDictStream) {
+        initializeDictionaries(cmuDictStream, cmuPhonesStream, cmuSymbolsStream, extraDictStream);
+    }
+
+    // call initializeDictionaries before first use so we have something to work with
+    public void initializeDictionaries(String cmuDictClasspath, String cmuPhonesClasspath, String cmuSymbolsClasspath) {
+        initializeDictionaries(cmuDictClasspath, cmuPhonesClasspath, cmuSymbolsClasspath, null);
+    }
+
+    public void initializeDictionaries(String cmuDictClasspath, String cmuPhonesClasspath, String cmuSymbolsClasspath, String extraDictClasspath) {
+        InputStream extra = null;
+        if (extraDictClasspath != null) {
+            extra =Poet.class.getResourceAsStream(extraDictClasspath);
+        }
+        initializeDictionaries(Poet.class.getResourceAsStream(cmuDictClasspath), Poet.class.getResourceAsStream(cmuPhonesClasspath),
+                Poet.class.getResourceAsStream(cmuSymbolsClasspath), extra);
+    }
+
+    public void initializeDictionaries(InputStream cmuDictStream, InputStream cmuPhonesStream, InputStream cmuSymbolsStream, InputStream extraDictStream) {
         try {
-            populatePhonemes(cmuPhonesLocation, cmuSymbolsLocation); // do this first to get the vowels
-            populateCmuMap(cmuDictLocation);
-            if (extraDictLocation != null) {
-                populateCmuMap(extraDictLocation);
+            populatePhonemes(cmuPhonesStream, cmuSymbolsStream); // do this first to get the vowels
+            populateCmuMap(cmuDictStream);
+            if (extraDictStream != null) {
+                populateCmuMap(extraDictStream);
             }
         } catch (IOException e) {
             loggie.error("Unable to load CMU files", e);
@@ -82,8 +109,46 @@ public class Poet {
         return null; // we don't have things that rhyme :(
     }
 
-    private void populateCmuMap(String filename) throws IOException {
-        try(BufferedReader reader = new BufferedReader(new InputStreamReader(Poet.class.getResourceAsStream(filename)))) {
+    /**
+     * Extract the section to rhyme with. This is probably the last few letters
+     * up to and including the last vowel
+     * @param phonemeList for this word
+     */
+    @VisibleForTesting
+    String getRhymingSection(List<String> phonemeList) {
+        StringBuilder rhymeMe = new StringBuilder();
+        Stack<String> rhymeMeStack = new Stack<>();
+        // walk the list backwards until we find the last vowel
+        int i;
+        for (i = phonemeList.size() - 1; i >= 0; i--) {
+            String pho = phonemeList.get(i);
+            rhymeMeStack.push(pho);
+            if (vowels.contains(pho)) {
+                // we did it
+                break;
+            }
+        }
+
+        // TODO I googled and this is a "single" rhyme. Make more extractions to try for double and dactylic rhymes
+
+        if (rhymeMeStack.size() == 1) { // this means we only pulled off the last phoneme and it was a vowel
+            // so just grab one more if available
+            i = phonemeList.size() - 2;
+            if (i >= 0) {
+                rhymeMeStack.push(phonemeList.get(i));
+            }
+        }
+
+        // stacks still append to the back, so it's just less annoying reverse traversal
+        while (!rhymeMeStack.empty()) {
+            // pop so they're in the right order
+            rhymeMe.append(rhymeMeStack.pop());
+        }
+        return rhymeMe.toString();
+    }
+
+    private void populateCmuMap(InputStream cmuDict) throws IOException {
+        try(BufferedReader reader = new BufferedReader(new InputStreamReader(cmuDict))) {
             String line;
             while((line = reader.readLine()) != null) {
                 if (!line.startsWith(cmuDictComment)) {
@@ -92,7 +157,7 @@ public class Poet {
 
 
                     List<String> phonemes = Lists.newArrayList(split);
-                    phonemes.remove(0); // TODO this is O(n) but it's only as long as the phoneme list, so 12 as a max?
+                    phonemes.remove(0); // TODO this is O(n) but it's only as long as the phoneme list, so 16 max?
 
                     // TODO do something with the words like prestigious(1). I don't care enough to look up multiple
                     // pronunciations, but I want all of them to be stored in the reverse lookup map. I think that's ok?
@@ -122,11 +187,11 @@ public class Poet {
         return split[0];
     }
 
-    private void populatePhonemes(String phonemesFileName, String symbolsFilename) throws IOException {
+    private void populatePhonemes(InputStream phonemesStream, InputStream symbolsStream) throws IOException {
         List<String> allSymbols = new ArrayList<>();
 
         // read the symbols and then transfer them into the vowels set based on the phonemes input
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(Poet.class.getResourceAsStream(symbolsFilename)))) {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(symbolsStream))) {
             String line;
             while ((line = reader.readLine()) != null) {
                 if (!line.startsWith(cmuDictComment)) {
@@ -135,7 +200,7 @@ public class Poet {
             }
         }
 
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(Poet.class.getResourceAsStream(phonemesFileName)))) {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(phonemesStream))) {
             String line;
             while ((line = reader.readLine()) != null) {
                 if (!line.startsWith(cmuDictComment)) {
@@ -157,45 +222,7 @@ public class Poet {
             }
         }
 
-        loggie.info(vowels.toString());
-    }
-
-    /**
-     * Extract the section to rhyme with. This is probably the last few letters
-     * up to and including the last vowel
-     * @param phonemeList for this word
-     */
-    @VisibleForTesting
-    String getRhymingSection(List<String> phonemeList) {
-        StringBuilder rhymeMe = new StringBuilder();
-        Stack<String> rhymeMeStack = new Stack<>();
-        // walk the list backwards until we find the last vowel
-        int i;
-        for (i = phonemeList.size() - 1; i >= 0; i--) {
-            String pho = phonemeList.get(i);
-            rhymeMeStack.push(pho);
-            if (vowels.contains(pho)) {
-                // we did it
-                break;
-            }
-        }
-
-        // TODO I googled and this is a "single" rhyme. If possible, make more extractions to try for double and dactylic rhymes
-
-        if (rhymeMeStack.size() == 1) { // this means we only pulled off the last phoneme and it was a vowel
-            // so just grab one more if available
-            i = phonemeList.size() - 2;
-            if (i >= 0) {
-                rhymeMeStack.push(phonemeList.get(i));
-            }
-        }
-
-        // stacks still append to the back, so it's just less annoying reverse traversal
-        while (!rhymeMeStack.empty()) {
-            // pop so they're in the right order
-            rhymeMe.append(rhymeMeStack.pop());
-        }
-        return rhymeMe.toString();
+        loggie.debug("vowels: {}", vowels.toString());
     }
 
 }

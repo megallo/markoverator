@@ -17,7 +17,11 @@ public class PoetTest {
 
     @BeforeClass
     public static void setup() throws IOException {
-        poet = new Poet(mockDict, realPhones, realSymbols);
+        poet = new Poet(
+                PoetTest.class.getResourceAsStream(mockDict),
+                PoetTest.class.getResourceAsStream(realPhones),
+                PoetTest.class.getResourceAsStream(realSymbols),
+                null);
     }
 
     public PoetTest() {

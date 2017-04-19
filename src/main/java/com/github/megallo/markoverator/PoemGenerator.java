@@ -40,10 +40,10 @@ public class PoemGenerator {
     Bigrammer bigrams = new Bigrammer(7);
 
     // TODO move the resources to their own module
-    private final String cmuDictLocation = "/poet/cmudict-0.7b.txt";
-    private final String myDictLocation = "/poet/extras-dict.txt";
-    private final String phonemeLocation = "/poet/cmudict-0.7b-phones.txt";
-    private final String symbolsLocation = "/poet/cmudict-0.7b-symbols.txt";
+    private final String cmuDictLocation = "/com/github/megallo/markoverator/poet/cmudict-0.7b.txt";
+    private final String myDictLocation = "/com/github/megallo/markoverator/poet/extras-dict.txt";
+    private final String phonemeLocation = "/com/github/megallo/markoverator/poet/cmudict-0.7b-phones.txt";
+    private final String symbolsLocation = "/com/github/megallo/markoverator/poet/cmudict-0.7b-symbols.txt";
 
     public static void main(String[] args) throws IOException {
         if (args.length != 2) {

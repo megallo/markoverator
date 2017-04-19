@@ -11,9 +11,9 @@ import java.util.List;
 public class PoetTest {
 
     static Poet poet;
-    private static final String mockDict = "/poet/mockCmuDict.txt";
-    private static final String realPhones = "/poet/cmudict-0.7b-phones.txt";
-    private static final String realSymbols = "/poet/cmudict-0.7b-symbols.txt";
+    private static final String mockDict = "/com/github/megallo/markoverator/poet/mockCmuDict.txt";
+    private static final String realPhones = "/com/github/megallo/markoverator/poet/cmudict-0.7b-phones.txt";
+    private static final String realSymbols = "/com/github/megallo/markoverator/poet/cmudict-0.7b-symbols.txt";
 
     @BeforeClass
     public static void setup() throws IOException {

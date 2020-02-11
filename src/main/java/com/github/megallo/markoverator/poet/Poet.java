@@ -66,6 +66,8 @@ public class Poet {
         initializeDictionaries(cmuDictStream, cmuPhonesStream, cmuSymbolsStream, extraDictStream);
     }
 
+    // TODO SRSLY: put these into a helper class in a smart way so they can be reused across components
+
     // call initializeDictionaries before first use so we have something to work with
     public void initializeDictionaries(String cmuDictClasspath, String cmuPhonesClasspath, String cmuSymbolsClasspath) {
         initializeDictionaries(cmuDictClasspath, cmuPhonesClasspath, cmuSymbolsClasspath, null);
@@ -74,7 +76,7 @@ public class Poet {
     public void initializeDictionaries(String cmuDictClasspath, String cmuPhonesClasspath, String cmuSymbolsClasspath, String extraDictClasspath) {
         InputStream extra = null;
         if (extraDictClasspath != null) {
-            extra =Poet.class.getResourceAsStream(extraDictClasspath);
+            extra = Poet.class.getResourceAsStream(extraDictClasspath);
         }
         initializeDictionaries(Poet.class.getResourceAsStream(cmuDictClasspath), Poet.class.getResourceAsStream(cmuPhonesClasspath),
                 Poet.class.getResourceAsStream(cmuSymbolsClasspath), extra);
@@ -101,8 +103,10 @@ public class Poet {
             String targetPhonemeMash = getRhymingSection(targetPhonemes);
             if (endingPhonemesWords.containsKey(targetPhonemeMash)) {
                 // we have things that rhyme!
-                loggie.info("Found {} words that rhyme with {}", endingPhonemesWords.get(targetPhonemeMash).size(), targetWord);
-                return endingPhonemesWords.get(targetPhonemeMash);
+                List<String> allRhymingWords = endingPhonemesWords.get(targetPhonemeMash);
+                allRhymingWords.remove((targetWord.toLowerCase())); // don't rhyme with yourself
+                loggie.info("Found {} words that rhyme with {}", allRhymingWords.size(), targetWord);
+                return allRhymingWords;
             }
         }
 
@@ -112,6 +116,7 @@ public class Poet {
     /**
      * Extract the section to rhyme with. This is probably the last few letters
      * up to and including the last vowel
+     *
      * @param phonemeList for this word
      */
     @VisibleForTesting
@@ -148,9 +153,9 @@ public class Poet {
     }
 
     private void populateCmuMap(InputStream cmuDict) throws IOException {
-        try(BufferedReader reader = new BufferedReader(new InputStreamReader(cmuDict))) {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(cmuDict))) {
             String line;
-            while((line = reader.readLine()) != null) {
+            while ((line = reader.readLine()) != null) {
                 if (!line.startsWith(cmuDictComment)) {
                     String[] split = line.split("\\s+");// break on whitespace
                     String word = split[0].toLowerCase();
@@ -225,4 +230,37 @@ public class Poet {
         loggie.debug("vowels: {}", vowels.toString());
     }
 
+    /***********************************************************/
+
+
+    // TODO you need to decide if you count vowels on the fly or hold a vowel count for every word in memory
+    // you could make Pair a full object and stick in there
+
+    // TODO everything past here needs to go into Songwriter, just messing around here
+    public int countVowels(String targetWord) {
+
+        int syllableCount = 0;
+        if (wordPhonemes.containsKey(targetWord.toLowerCase())) {
+            List<String> phonemeList = wordPhonemes.get(targetWord.toLowerCase());
+            for (String pho : phonemeList) {
+                if (vowels.contains(pho)) {
+                    // we are counting vowels to count syllables, this is a hack but I think it might just work
+                    syllableCount++;
+                }
+            }
+        }
+        return syllableCount;
+    }
+
+    public boolean knownWord(String word) {
+        // if this is punctuation, let it pass through
+        // later it will have a syllable count of zero
+        if (word.length() == 1 && !Character.isLetter(word.charAt(0))) {
+                return true;
+        }
+
+        // for everything else, make sure it has an entry
+        // because it will look like it has zero syllables and upend our counts
+        return wordPhonemes.containsKey(word.toLowerCase());
+    }
 }

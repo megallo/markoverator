@@ -11,13 +11,15 @@ import java.util.List;
 public class BigramModel {
 
     private List<String> fullWordList;
+    private List<List<String>> fullPhraseList;
     private HashMap<Pair, List<String>> forwardCache = new HashMap<>();
     private HashMap<Pair, List<String>> backwardCache = new HashMap<>();
 
     public BigramModel() { }
 
-    public BigramModel(List<String> fullWordList, HashMap<Pair, List<String>> forwardCache, HashMap<Pair, List<String>> backwardCache) {
+    public BigramModel(List<String> fullWordList, List<List<String>> fullPhraseList, HashMap<Pair, List<String>> forwardCache, HashMap<Pair, List<String>> backwardCache) {
         this.fullWordList = fullWordList;
+        this.fullPhraseList = fullPhraseList;
         this.forwardCache = forwardCache;
         this.backwardCache = backwardCache;
     }
@@ -44,5 +46,13 @@ public class BigramModel {
 
     public void setBackwardCache(HashMap<Pair, List<String>> backwardCache) {
         this.backwardCache = backwardCache;
+    }
+
+    public List<List<String>> getFullPhraseList() {
+        return fullPhraseList;
+    }
+
+    public void setFullPhraseList(List<List<String>> fullPhraseList) {
+        this.fullPhraseList = fullPhraseList;
     }
 }

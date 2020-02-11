@@ -52,4 +52,8 @@ public class Pair {
         return result;
     }
 
+    @Override
+    public String toString() {
+        return "Pair{ " + first + " " + second + " }";
+    }
 }

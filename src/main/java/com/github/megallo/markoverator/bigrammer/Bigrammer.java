@@ -30,6 +30,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -47,10 +48,13 @@ public class Bigrammer {
     private Random random = new Random();
 
     private int maxHalfLength = 8;
-    final static String DELIM = "<DELIM>";
+    public final static String DELIM = "<DELIM>";
 
-    private BigramModel model = null;
-    private Map<String, List<Integer>> wordIndexMap; // calculated, so not part of the model object
+    // TODO I made these public so I could get at them from Songwriter, this is bad, do it right
+    public BigramModel model = null;
+    public Map<String, List<Integer>> wordIndexMap; // calculated, so not part of the model object
+     // calculated, so not part of the model object
+    public Map<String, List<Integer>> wordPhraseIndexMap = new HashMap<>(); // calculated, so not part of the model object
 
     private PartOfSpeechUtils posUtil = new PartOfSpeechUtils();
 
@@ -68,16 +72,7 @@ public class Bigrammer {
             throw new RuntimeException("No model generated or loaded");
         }
 
-        int seed;
-        do {
-            // if you start too close to the end, you'll fall off it
-            seed = random.nextInt(model.getFullWordList().size() - 3);
-            // keep trying until we get a reasonable starting point
-        } while (model.getFullWordList().get(seed).equals(DELIM) || model.getFullWordList().get(seed).equals(DELIM));
-                // TODO this addition will prevent one-word responses; do I want that?
-                // || model.getFullWordList().get(seed+1).equals(EOM) || model.getFullWordList().get(seed-1).equals(BOM));
-
-        return generateRandom(seed);
+        return generateRandom(getRandomSeed());
     }
 
     /**
@@ -157,6 +152,8 @@ public class Bigrammer {
         return null;
     }
 
+    // TODO why do I ever hold the strings instead of just the memory locations as ints???
+
     @VisibleForTesting
     Integer getAnyLocationOfSeed(String seedWord) {
 
@@ -167,6 +164,107 @@ public class Bigrammer {
         }
         return null; // it's not in this model
     }
+
+    public String getRandomSeedWord() {
+        return model.getFullWordList().get(getRandomSeed());
+    }
+
+    private int getRandomSeed() {
+        int seed;
+        do {
+            // if you start too close to the end, you'll fall off it
+            seed = random.nextInt(model.getFullWordList().size() - 3);
+            // keep trying until we get a reasonable starting point
+        } while (model.getFullWordList().get(seed).equals(DELIM) || model.getFullWordList().get(seed).equals(DELIM));
+        // TODO this addition will prevent one-word responses; do I want that?
+        // || model.getFullWordList().get(seed+1).equals(EOM) || model.getFullWordList().get(seed-1).equals(BOM));
+
+        return seed;
+    }
+
+    /**
+     * For the given word, find all words that can come directly before it
+     * to create a starting pair of seeds
+     * @param seedWord the word you want to end with
+     * @return all available pairs of (previous word, seed word)
+     */
+    public List<Pair> getAllPossibleStarts(String seedWord) {
+
+        List<Integer> allPossibleLocations = new ArrayList<>();
+
+        if (wordIndexMap.containsKey(seedWord.toLowerCase())) {
+            // look up every place this word occurs
+            allPossibleLocations = wordIndexMap.get(seedWord.toLowerCase());
+        }
+
+        allPossibleLocations.remove(new Integer(0)); // avoid null check on every iteration by removing "0" as a value TODO test this
+
+        HashSet<Pair> targetWordPairs = new HashSet<>();
+        for (int location : allPossibleLocations) {
+            // grab this word and any word that could possibly come immediately before it
+            String previousWord = model.getFullWordList().get(location - 1);
+            targetWordPairs.add(new Pair(previousWord, seedWord));
+        }
+
+        return new ArrayList<>(targetWordPairs);
+    }
+
+
+    public List<List<String>> getPhrasesContainingWord(String seedWord) {
+
+        List<List<String>> phrasesContainingWord = new ArrayList<>();
+        if (wordPhraseIndexMap.containsKey(seedWord.toLowerCase())) {
+            List<Integer> phraseIndices = wordPhraseIndexMap.get(seedWord.toLowerCase());
+            for (int index : phraseIndices) {
+                phrasesContainingWord.add(model.getFullPhraseList().get(index));
+            }
+        }
+
+        // TODO dedupe phrases?
+
+        return phrasesContainingWord;
+
+    /* This might be interesting for syllable counting? Meh?
+
+
+        List<Integer> allPossibleLocations = new ArrayList<>();
+
+        if (wordIndexMap.containsKey(seedWord.toLowerCase())) {
+            // look up every place this word occurs
+            allPossibleLocations = wordIndexMap.get(seedWord.toLowerCase());
+        }
+
+
+
+        for (int location : allPossibleLocations) {
+            int locationCounter = location;
+
+            LinkedList<String> onePhraseContainingWord = new LinkedList<>();
+            String previousWord;
+            String latterWord;
+
+            // add the word itself
+            onePhraseContainingWord.add(model.getFullWordList().get(location));
+
+            // grab all words that come before it until the beginning of phrase, marked by DELIM
+            while (!(previousWord = model.getFullWordList().get(locationCounter - 1)).equals(DELIM)) {
+                onePhraseContainingWord.addFirst(previousWord);
+                locationCounter--;
+            }
+
+            locationCounter = location; // back to where the word was
+            // grab all words that come after it until the end of phrase, marked by DELIM
+            while (!(latterWord = model.getFullWordList().get(locationCounter + 1)).equals(DELIM)) {
+                onePhraseContainingWord.addLast(latterWord);
+                locationCounter++;
+            }
+
+            phrasesContainingWord.add(onePhraseContainingWord);
+
+        }*/
+
+    }
+
 
     /**
      * Attempts to find the exact two-word phrase you're looking for,
@@ -268,6 +366,26 @@ public class Bigrammer {
     }
 
     /**
+     * A pass-through getter
+     * @param word1 previous word
+     * @param word2 following word
+     * @return a list of possible words that could occur before this pair
+     */
+    public List<String> getBackwardOptions(String word1, String word2) {
+        return model.getBackwardCache().get(new Pair(word1, word2));
+    }
+
+    /**
+     * A pass-through getter
+     * @param word1 previous word
+     * @param word2 following word
+     * @return a list of possible words that could occur after this pair
+     */
+    public List<String> getForwardOptions(String word1, String word2) {
+        return model.getForwardCache().get(new Pair(word1, word2));
+    }
+
+    /**
      * Call me first!
      * Initialize this object with a model based on the provided sentences.
      * @param sentencesList a list of sentences: each sentence is pre-tokenized, usually into words
@@ -276,6 +394,8 @@ public class Bigrammer {
         HashMap<Pair, List<String>> forwardCache = new HashMap<>();
         HashMap<Pair, List<String>> backwardCache = new HashMap<>();
         List<String> fullWordList = new ArrayList<>();
+
+        List<List<String>> fullPhraseList = new ArrayList<>(sentencesList); // TODO this is for Songfinder
 
         // add sentence delimiters to get more natural sentence starts and ends
         for (List<String> oneSentence : sentencesList) {
@@ -293,6 +413,7 @@ public class Bigrammer {
         // TODO try out only adding a word if it's not in the list yet
         // makes it less natural statistically but probably adds more fun randomness
         // and will save space in the model serialization
+        // TODO the above todo would create fewer syllable re-evaluations in Songwriter
         for (int i = 0; i < fullWordList.size() - 2; i++) {
             String w1 = fullWordList.get(i);
             String w2 = fullWordList.get(i+1);
@@ -312,8 +433,9 @@ public class Bigrammer {
             backwardCache.get(backwardPair).add(w1);
         }
 
-        model = new BigramModel(fullWordList, forwardCache, backwardCache);
+        model = new BigramModel(fullWordList, fullPhraseList, forwardCache, backwardCache);
         calculateWordIndices();
+        calculateWordPhraseIndices(); // TODO we only need this for Songfinder
     }
 
     private void calculateWordIndices() {
@@ -327,6 +449,20 @@ public class Bigrammer {
             }
             wordIndexMap.get(word).add(i);
             // DELIM could be removed here if space is a concern
+        }
+    }
+
+    private void calculateWordPhraseIndices() {
+        // make a map of a list of the indices of the phrase at which a given word appears
+        // so if you want to find all phrases containing "cats", you don't have to scan all locations in wordIndexMap
+        for (int i = 0; i < model.getFullPhraseList().size(); i++) { // for each phrase
+            List<String> phrase = model.getFullPhraseList().get(i);
+            for (String word : phrase) { // for each word in the phrase
+                if (!wordPhraseIndexMap.containsKey(word)) {
+                    wordPhraseIndexMap.put(word, new ArrayList<Integer>());
+                }
+                wordPhraseIndexMap.get(word).add(i); // this is the phrase index in fullPhraseList
+            }
         }
     }
 
@@ -351,8 +487,10 @@ public class Bigrammer {
         return false;
     }
 
+    // TODO move this to TextUtils
+
     // TODO no commas, colons, ampersands, semicolons
-    protected boolean isDecentEndingWord(List<String> sentence) {
+    public boolean isDecentEndingWord(List<String> sentence) {
         // avoid ending with a preposition, adjective, etc
         List<String> tags = posUtil.tagSentence(sentence);
 
@@ -371,7 +509,7 @@ public class Bigrammer {
                 endWord.equals("just") ||   // I don't want to filter out all RB (adverbs), so this is stupid and I want to come up with a smarter thing
                 endWord.endsWith(","))      // in reality this is its own word, but let's not assume that here
                 {
-            loggie.info("Rejecting ending of :: {}", endWord);
+            loggie.debug("Rejecting ending of :: {}", endWord);
             return false;
         }
 
@@ -395,6 +533,7 @@ public class Bigrammer {
         Input input = new Input(inputStream);
         model = kryo.readObject(input, BigramModel.class);
         calculateWordIndices();
+        calculateWordPhraseIndices();
         input.close();
 
         loggie.info("Loaded model; found {} words", model.getFullWordList().size());

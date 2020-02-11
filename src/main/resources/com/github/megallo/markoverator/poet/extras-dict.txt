@@ -4,3 +4,18 @@ KARLIE  K AA1 R L IY0
 MEGAN  M EH1 G IH0 N
 MEGAN'S  M EH1 G IH0 N Z
 MEGS  M EH1 G Z
+
+;;; numbers
+1  W AH1 N
+2  T UW1
+3  TH R IY1
+4  F AO1 R
+5  F AY1 V
+6  S IH1 K S
+7  S EH1 V AH0 N
+8  EY1 T
+9  N AY1 N
+10 T EH1 N
+
+;;; TODO I want to straight up remove things from the poem dictionary because they are in my way
+;;; like RE and DR (pronounced "drive" or "doctor")

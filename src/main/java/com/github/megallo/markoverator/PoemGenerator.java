@@ -101,7 +101,7 @@ public class PoemGenerator {
 
     private String makePoemLine(String word) {
         List<String> tokens;
-        if ((tokens = bigrams.generateRandomBackwards(word)) != null) {
+        if ((tokens = bigrams.generateRandomBackwards(word, 3, 5)) != null) {
             // we found a word that is in the model
             return textUtils.stringify(textUtils.capitalizeInitialWord(textUtils.reattachPunctuation(tokens)));
         }

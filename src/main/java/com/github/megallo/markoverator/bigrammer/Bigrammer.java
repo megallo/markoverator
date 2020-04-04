@@ -61,6 +61,14 @@ public class Bigrammer {
     }
 
     /**
+     * TODO do I need this if I just set the line length in the method signature
+     * @param maxHalfLength
+     */
+    public void setMaxHalfLength(int maxHalfLength) {
+        this.maxHalfLength = maxHalfLength;
+    }
+
+    /**
      * Generate a random sentence.
      */
     public List<String> generateRandom() {
@@ -130,6 +138,10 @@ public class Bigrammer {
         return null;
     }
 
+    public List<String> generateRandomBackwards(String seedWord) {
+        return generateRandomBackwards(seedWord, 0, maxHalfLength/2);
+    }
+
     /**
      * Attempts to find the exact word you're looking for,
      * and generate a sentence ending with that word.
@@ -138,7 +150,7 @@ public class Bigrammer {
      * @return null if exact string is not found
      */
     // TODO it would be handy for poems if we could give this a suggested length directly
-    public List<String> generateRandomBackwards(String seedWord) {
+    public List<String> generateRandomBackwards(String seedWord, int minWordCount, int maxWordCount) {
         if (model == null) {
             throw new RuntimeException("No model generated or loaded");
         }
@@ -149,7 +161,7 @@ public class Bigrammer {
             // now take that word plus the word immediately before it and start bigrammin'
             String wordBeforeSeed = model.getFullWordList().get(chosenRandomLocation - 1);
 
-            return generateBackwardText(wordBeforeSeed, seedWord);
+            return generateBackwardText(wordBeforeSeed, seedWord, minWordCount, maxWordCount);
         }
 
         // TODO stemming or wordnet to try harder at finding the word
@@ -204,10 +216,12 @@ public class Bigrammer {
 
     @VisibleForTesting
     List<String> generatePhraseWithKnownPair(String w1, String w2) {
-
+        // TODO if w2 is delim then we end up removing the w1 from backwardText
         List<String> backwardText = generateBackwardText(w1, w2); // includes seed words at end
         List<String> forwardText = generateForwardText(w1, w2);   // includes seed words at beginning
 
+        // if w1 is <DELIM> then backwardText ends up empty (which makes sense but ruins indexes)
+//        int subListToIndex = backwardText.size() > 1 ? backwardText.size() - 2 : 0;
         List<String> finalText = backwardText.subList(0, backwardText.size() - 2); // remove seed words
         finalText.addAll(forwardText); // and mush 'em together
 
@@ -247,15 +261,19 @@ public class Bigrammer {
         return generated;
     }
 
-    @VisibleForTesting
     List<String> generateBackwardText(String word2, String word3) {
+        return generateBackwardText(word2, word3, 0, maxHalfLength/2);
+    }
+
+    @VisibleForTesting
+    List<String> generateBackwardText(String word2, String word3, int minWordCount, int maxWordCount) {
         Stack<String> generated = new Stack<>();
-        while (generated.size() <= maxHalfLength) {
+        while ((generated.size() <= minWordCount) || (generated.size() > maxWordCount)) {
             generated.push(word3);
             List<String> prevWordOptions = model.getBackwardCache().get(new Pair(word2, word3));
             String word1 = prevWordOptions.get(random.nextInt(prevWordOptions.size()));
             // TODO end based on POS tag - make a method that checks end condition
-            if (word1.equals(DELIM)) {
+            if (word1.equals(DELIM) && generated.size() >= minWordCount) {
                 break;
             }
             word3 = word2;

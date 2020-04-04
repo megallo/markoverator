@@ -116,19 +116,21 @@ public class TextUtilTest {
     }
 
     @Test
-    public void testRemoveParens() {
-        String withParens = "(go see, ok?) (awthanks) :) ;) :P :-)";
+    public void testParensAndColons() {
+        String withParens = "(go see, ok?) :shrug: (awthanks) :) ;) :P :-) :cake::cake:cake:";
         List<String> withoutParens = new LinkedList<>();
         withoutParens.add("go");
         withoutParens.add("see,");
         withoutParens.add("ok?");
+        withoutParens.add(":shrug:");
         withoutParens.add("(awthanks)");
         withoutParens.add(":)");
         withoutParens.add(";)");
         withoutParens.add(":P");
         withoutParens.add(":-)");
+        withoutParens.add(":cake::cake:cake:");
 
-        Assert.assertEquals(withoutParens, textUtils.removeUnmatchedParentheses(Arrays.asList(withParens.split("\\s+"))));
+        Assert.assertEquals(withoutParens, textUtils.removeUnmatchedParenthesesAndColons(Arrays.asList(withParens.split("\\s+"))));
     }
 
     @Test
@@ -137,12 +139,26 @@ public class TextUtilTest {
         LinkedList<String> split = new LinkedList<>(Arrays.asList(withPunc.split("\\s+")));
 
         List<String> fixedPunc = new LinkedList<>();
-        fixedPunc.add("Hey");
-        fixedPunc.add("!");
+        fixedPunc.add("Hey!");
         fixedPunc.add("How's");
         fixedPunc.add("it");
-        fixedPunc.add("going");
-        fixedPunc.add("?");
+        fixedPunc.add("going?");
+        fixedPunc.add("(awwyiss)");
+        fixedPunc.add(":)");
+
+        Assert.assertEquals(fixedPunc, textUtils.handlePunctuation(split));
+
+    }
+
+    @Test
+    public void testRemoveUgly() {
+        String withPunc = "( Hey! ) 'How's : this (awwyiss) :)";
+        LinkedList<String> split = new LinkedList<>(Arrays.asList(withPunc.split("\\s+")));
+
+        List<String> fixedPunc = new LinkedList<>();
+        fixedPunc.add("Hey!");
+        fixedPunc.add("How's");
+        fixedPunc.add("this");
         fixedPunc.add("(awwyiss)");
         fixedPunc.add(":)");
 
@@ -156,30 +172,40 @@ public class TextUtilTest {
         LinkedList<String> split = new LinkedList<>(Arrays.asList(withPunc.split("\\s+")));
 
         List<String> fixedPunc = new LinkedList<>();
-        fixedPunc.add("Hey");
-        fixedPunc.add("!!!");
-        fixedPunc.add("Wat");
-        fixedPunc.add("??");
+        fixedPunc.add("Hey!!!");
+        fixedPunc.add("Wat??");
 
         Assert.assertEquals(fixedPunc, textUtils.handlePunctuation(split));
 
     }
 
     @Test
+    public void testSpaceOutPunctuation() {
+        String withPunc = "Hey!!! Wat??";
+        LinkedList<String> split = new LinkedList<>(Arrays.asList(withPunc.split("\\s+")));
+
+        List<String> fixedPunc = new LinkedList<>();
+        fixedPunc.add("Hey");
+        fixedPunc.add("!!!");
+        fixedPunc.add("Wat");
+        fixedPunc.add("??");
+
+        Assert.assertEquals(fixedPunc, textUtils.spaceOutPunctuation(split));
+
+    }
+
+    @Test
     public void testHandlePunctuationRemoval() {
-        String orig = "\"what?\" 'hey nope, (disappear) ' 'whatevs (facepalm),";
+        String orig = "\"what?\" 'hey nope, (disappear) ' 'whatevs :facepalm:,";
         LinkedList<String> origSplit = new LinkedList<>(Arrays.asList(orig.split("\\s+")));
 
         List<String> fixedPunc = new LinkedList<>();
-        fixedPunc.add("what");
-        fixedPunc.add("?");
+        fixedPunc.add("what?");
         fixedPunc.add("hey");
-        fixedPunc.add("nope");
-        fixedPunc.add(",");
+        fixedPunc.add("nope,");
         fixedPunc.add("(disappear)");
         fixedPunc.add("whatevs");
-        fixedPunc.add("(facepalm)");
-        fixedPunc.add(",");
+        fixedPunc.add(":facepalm:,");
 
         Assert.assertEquals(fixedPunc, textUtils.handlePunctuation(origSplit));
     }
@@ -195,6 +221,31 @@ public class TextUtilTest {
         fixedPunc.add("?");
 
         Assert.assertEquals(fixedPunc, textUtils.handlePunctuation(origSplit));
+    }
+
+    @Test
+    public void testRemoveSlackMentions() {
+        String orig = "Happy Birthday, <@U111111>!!";
+        LinkedList<String> origSplit = new LinkedList<>(Arrays.asList(orig.split("\\s+")));
+
+        List<String> fixedPunc = new LinkedList<>();
+        fixedPunc.add("Happy");
+        fixedPunc.add("Birthday,");
+        fixedPunc.add("!!");
+
+        Assert.assertEquals(fixedPunc, textUtils.removeSlackMentions(origSplit));
+    }
+
+    @Test
+    public void testRemoveSlackMentionsSimple() {
+        String orig = "hi <@U111111>";
+        LinkedList<String> origSplit = new LinkedList<>(Arrays.asList(orig.split("\\s+")));
+
+        List<String> fixedPunc = new LinkedList<>();
+        fixedPunc.add("hi");
+        fixedPunc.add("");
+
+        Assert.assertEquals(fixedPunc, textUtils.removeSlackMentions(origSplit));
     }
 
     @Test
@@ -250,4 +301,128 @@ public class TextUtilTest {
         Assert.assertEquals(fixed, textUtils.removeAtsFromMentions(new LinkedList<>(Arrays.asList(orig.split("\\s+")))));
 
     }
+
+    @Test
+    public void testFullSuite() {
+        String orig = "(just looking at work currently in progress)";
+        String expected = "just looking at work currently in progress";
+        Assert.assertEquals(expected, reString(textUtils.cleanUpLine(orig)).trim());
+
+        orig = "Tell me if I'm reading this right. It looks like it's listing Gray's 5-day peak at 100%, but the red horizontal line is Purple's, right?";
+        expected = "tell me if I'm reading this right . it looks like it's listing gray's 5-day peak at 100% , but the red horizontal line is purple's , right ?";
+        Assert.assertEquals(expected, reString(textUtils.cleanUpLine(orig)).trim());
+
+        orig = ":thumbsup:";
+        expected = ":thumbsup:";
+        Assert.assertEquals(expected, reString(textUtils.cleanUpLine(orig)).trim());
+
+        orig = "Thank you! Makes much more sense";
+        expected = "thank you ! makes much more sense";
+        Assert.assertEquals(expected, reString(textUtils.cleanUpLine(orig)).trim());
+
+        orig = ":sparkles: :party:";
+        expected = ":sparkles: :party:";
+        Assert.assertEquals(expected, reString(textUtils.cleanUpLine(orig)).trim());
+
+        orig = "I hope it stays that way :crossedfingers:";
+        expected = "I hope it stays that way :crossedfingers:";
+        Assert.assertEquals(expected, reString(textUtils.cleanUpLine(orig)).trim());
+
+        orig = "idk if you remember :)";
+        expected = "idk if you remember :)";
+        Assert.assertEquals(expected, reString(textUtils.cleanUpLine(orig)).trim());
+
+        orig = "^ Ruh roh. What'd 5 do wrong?";
+        expected = "ruh roh . what'd 5 do wrong ?";
+        Assert.assertEquals(expected, reString(textUtils.cleanUpLine(orig)).trim());
+
+        orig = "I mean, we did just update 11...";
+        expected = "I mean , we did just update 11";
+        Assert.assertEquals(expected, reString(textUtils.cleanUpLine(orig)).trim());
+
+        orig = "it means we gotta get good at stuff (:";
+        expected = "it means we gotta get good at stuff (:";
+        Assert.assertEquals(expected, reString(textUtils.cleanUpLine(orig)).trim());
+
+        orig = "bowser, as identified by its \"little head + big shell\" was what that drawing is all about";
+        expected = "bowser , as identified by its little head + big shell was what that drawing is all about";
+        Assert.assertEquals(expected, reString(textUtils.cleanUpLine(orig)).trim());
+
+        orig = "Surely. Will link rn!";
+        expected = "surely . will link rn !";
+        Assert.assertEquals(expected, reString(textUtils.cleanUpLine(orig)).trim());
+
+        orig = "i forgot that part, thanks for that addition :pray::skin-tone-2:";
+        expected = "i forgot that part , thanks for that addition :pray::skin-tone-2:";
+        Assert.assertEquals(expected, reString(textUtils.cleanUpLine(orig)).trim());
+
+        orig = "googling: whatever";
+        expected = "googling whatever";
+        Assert.assertEquals(expected, reString(textUtils.cleanUpLine(orig)).trim());
+
+        orig = "secrets:::";
+        expected = "secrets";
+        Assert.assertEquals(expected, reString(textUtils.cleanUpLine(orig)).trim());
+
+        orig = "It’s on special now ($1/mo) for anyone who wants to try: ";
+        expected = "it’s on special now ($1/mo) for anyone who wants to try";
+        Assert.assertEquals(expected, reString(textUtils.cleanUpLine(orig)).trim());
+
+        orig = "this ^^^^^^^^^^^^";
+        expected = "this";
+        Assert.assertEquals(expected, reString(textUtils.cleanUpLine(orig)).trim());
+
+        orig = "Happy Birthday, <@U111111>!! :palmtree: Hope it's a great one!";
+        expected = "happy birthday !! :palmtree: hope it's a great one !";
+        Assert.assertEquals(expected, reString(textUtils.cleanUpLine(orig)).trim());
+
+        orig = "<!here> what's up?";
+        expected = "what's up ?";
+        Assert.assertEquals(expected, reString(textUtils.cleanUpLine(orig)).trim());
+
+        orig = "https://twitter.com/wtf_/status/675378565676830720";
+        expected = "";
+        Assert.assertEquals(expected, reString(textUtils.cleanUpLine(orig)).trim());
+
+        orig = "http://what.org/wtf_/status/675378565676830720";
+        expected = "";
+        Assert.assertEquals(expected, reString(textUtils.cleanUpLine(orig)).trim());
+
+        orig = "¯\\_(ツ)_/¯";
+        expected = "¯\\_(ツ)_/¯";
+        Assert.assertEquals(expected, reString(textUtils.cleanUpLine(orig)).trim());
+
+        orig = "\"we're kissed by fire, just like you.\"";
+        expected = "we're kissed by fire , just like you .";
+        Assert.assertEquals(expected, reString(textUtils.cleanUpLine(orig)).trim());
+
+        orig = "\"hi!\"";
+        expected = "hi !";
+        Assert.assertEquals(expected, reString(textUtils.cleanUpLine(orig)).trim());
+
+        orig = "(partytrain)";
+        expected = "(partytrain)";
+        Assert.assertEquals(expected, reString(textUtils.cleanUpLine(orig)).trim());
+
+        orig = " \uD83D\uDE09";
+        expected = "\uD83D\uDE09";
+        Assert.assertEquals(expected, reString(textUtils.cleanUpLine(orig)).trim());
+
+        orig = "awww";
+        expected = "awww";
+        Assert.assertEquals(expected, reString(textUtils.cleanUpLine(orig)).trim());
+
+        orig = "";
+        expected = "";
+        Assert.assertEquals(expected, reString(textUtils.cleanUpLine(orig)).trim());
+    }
+
+    private String reString(List<String> tokens) {
+        StringBuilder sb = new StringBuilder();
+        for (String word : tokens) {
+            sb.append(word).append(" ");
+        }
+        return sb.toString();
+    }
+    
 }

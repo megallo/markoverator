@@ -107,7 +107,7 @@ public class MarkovGenerator {
 
             String line;
             while ((line = br.readLine()) != null)   {
-                cleanedTokenizedLines.add(cleanUpLine(line));
+                cleanedTokenizedLines.add(textUtils.cleanUpLine(line));
             }
         } catch (FileNotFoundException e) {
             loggie.error("Unable to find file " + filename, e);
@@ -120,29 +120,4 @@ public class MarkovGenerator {
         return cleanedTokenizedLines;
     }
 
-    private List<String> cleanUpLine(String sentence) {
-        String[] split = sentence.split("\\s+"); // break on whitespace
-        List<String> splitSentence = new LinkedList<>(Arrays.asList(split));
-        splitSentence = textUtils.lowercaseAll(splitSentence, true);
-//        splitSentence = textUtils.removeBotCommands(splitSentence); // I moved this to the hipchat extractor
-        splitSentence = textUtils.removeUrls(splitSentence);
-        splitSentence = textUtils.removeExplicitNewlines(splitSentence);
-        splitSentence = textUtils.handlePunctuation(splitSentence);
-        // remove parentheses after punctuation
-        splitSentence = textUtils.removeUnmatchedParentheses(splitSentence);
-        // order matters! get rid of punctuation first so we can find things like (@zeus
-        splitSentence = textUtils.removeHereAllMentions(splitSentence);
-        splitSentence = textUtils.removeAtsFromMentions(splitSentence);
-        splitSentence = textUtils.removeEmptyWords(splitSentence);
-
-        if (loggie.isDebugEnabled()) {
-            StringBuilder sb = new StringBuilder();
-            for (String word : splitSentence) {
-                sb.append(word).append(" ");
-            }
-            loggie.debug(sb.toString());
-        }
-
-        return splitSentence;
-    }
 }

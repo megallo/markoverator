@@ -16,6 +16,7 @@
 
 package com.github.megallo.markoverator.utils;
 
+import java.util.LinkedList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
@@ -26,22 +27,72 @@ import java.util.List;
 import java.util.ListIterator;
 
 /**
- * Stuff for cleaning and sanitizing HipChat text.
+ * Stuff for cleaning and sanitizing Slack and HipChat text.
  */
 public class TextUtils {
 
     private  final Logger loggie = LoggerFactory.getLogger(TextUtils.class);
 
     private static final List<String> URL_THINGS =
-            Arrays.asList(".com", ".net", ".org", "www", "http", "://");
+            Arrays.asList(".com", ".net", ".org", "www.", "http", "://");
     private static final List<String> REMOVE_THIS_PUNCTUATION =
-            Arrays.asList("\"", "…", "^", "*"); // future me: leave # because issue numbers
+            Arrays.asList("\"", "…", "^", "*", "“", "”", "•" , ">"); // future me: leave # because issue numbers
     private static final Pattern ENDING_PUNCTUATION_REGEX =
-            Pattern.compile("[\\.!\\?,;:]+$");
+            Pattern.compile("[\\.!\\?,;]+$");
     private static final Pattern REATTACH_PUNCTUATION_REGEX =
             Pattern.compile("[\\.!\\?,;:]+");
 
     // TODO make a regex to remove logging and stack traces
+
+    /**
+     * This is probably what you want to use. It has just about everything for cleaning up a slack export
+     * invoked in the right order and tested thoroughly
+     * @param sentence String to clean
+     * @return tokenized and cleaned string
+     */
+    public List<String> cleanUpLine(String sentence) {
+        loggie.info(sentence);
+        String[] split = sentence.split("\\s+"); // break on whitespace
+        List<String> splitSentence = new LinkedList<>(Arrays.asList(split));
+
+        splitSentence = removeSlackMentions(splitSentence);
+        splitSentence = removeHereAllMentions(splitSentence); // hipchat
+        splitSentence = removeAtsFromMentions(splitSentence); // hipchat
+
+        splitSentence = lowercaseAll(splitSentence, true);
+        splitSentence = removeUrls(splitSentence);
+
+
+        splitSentence = removeExplicitNewlines(splitSentence);
+
+        /*
+            Punctuation in this order!
+              - space out first
+              - remove stuff that can't be paired back with its partner, or does not provide semantic value
+              - do that again to catch doubled up punctuation like \"hi!\"
+              - remove doubled/redundant punctuation usually caused by removing @mentions
+              - remove parentheses and colons - these need special care because of Hipchat and Slack emoticons
+         */
+        splitSentence = spaceOutPunctuation(splitSentence);
+        splitSentence = handlePunctuation(splitSentence);
+        splitSentence = spaceOutPunctuation(splitSentence);
+        splitSentence = handlePunctuation(splitSentence);
+        // remove redundant AFTER space out, otherwise we won't find it
+        splitSentence = removeRedundantPunctuation(splitSentence);
+        // remove parentheses after other punctuation
+        splitSentence = removeUnmatchedParenthesesAndColons(splitSentence);
+        splitSentence = removeEmptyWords(splitSentence);
+
+        if (loggie.isDebugEnabled()) {
+            StringBuilder sb = new StringBuilder();
+            for (String word : splitSentence) {
+                sb.append(word).append(" ");
+            }
+            loggie.info(sb.toString());
+        }
+
+        return splitSentence;
+    }
 
     /**
      * Make every word lowercase, with an option to leave special snowflake "I" alone
@@ -62,7 +113,24 @@ public class TextUtils {
     }
 
     /**
-     * Remove entire words that are reminiscent of URLs.
+     * Remove anything with angle brackets. For Slack dumps this will remove
+     *    user mentions <@U123456>
+     *    <!here> <!channel>
+     *    URLs
+     */
+    public List<String> removeSlackMentions(List<String> sentence) {
+        ListIterator<String> it = sentence.listIterator();
+        while (it.hasNext()) {
+            String word = it.next();
+            word = word.replaceAll("<.+>", "");
+            it.set(word);
+        }
+
+        return sentence;
+    }
+
+    /**
+     * Remove entire words that are reminiscent of raw URLs. Doesn't work with Slack.
      */
     public List<String> removeUrls(List<String> sentence) {
         ListIterator<String> it = sentence.listIterator();
@@ -80,6 +148,7 @@ public class TextUtils {
 
     /**
      * Remove mentions that will ping everyone, specifically @here and @all
+     * Specific to Hipchat.
      */
     public List<String> removeHereAllMentions(List<String> sentence) {
         ListIterator<String> it = sentence.listIterator();
@@ -94,6 +163,7 @@ public class TextUtils {
 
     /**
      * Remove the @ on words starting with '@'
+     * Specific to Hipchat
      */
     public List<String> removeAtsFromMentions(List<String> sentence) {
         ListIterator<String> it = sentence.listIterator();
@@ -108,6 +178,7 @@ public class TextUtils {
 
     /**
      * Remove words starting with '@'
+     * Specific to Hipchat
      */
     public List<String> removeEveryMention(List<String> sentence) {
         ListIterator<String> it = sentence.listIterator();
@@ -148,12 +219,42 @@ public class TextUtils {
         return sentence;
     }
 
+    /**
+     * Remove punctuation that comes before other punctuation
+     * Looking at cases where we removed the @mention and left a weird string, like
+     * Happy birthday , !!
+     * but NOT
+     * happy birthday ! :cupcake:
+     */
+    public List<String> removeRedundantPunctuation(List<String> sentenceTokens) {
+
+        if (sentenceTokens == null) {
+            return null;
+        }
+
+        for (int i = 1; i < sentenceTokens.size(); i++) {
+            // start with 1 so we don't try to reattach to a previous at index 0
+            String word = sentenceTokens.get(i);
+            String previousWord = sentenceTokens.get(i-1);
+            Matcher m = ENDING_PUNCTUATION_REGEX.matcher(word);
+            Matcher m2 = ENDING_PUNCTUATION_REGEX.matcher(previousWord);
+            if (m.matches() && m2.matches()) { // we only want to keep one punctuation, the last one
+                sentenceTokens.remove(i-1);
+            }
+        }
+
+        return sentenceTokens;
+
+    }
+
 
     /**
-     * Remove unmatched parentheses stuck to words, but leave HipChat emoticons (mindblown)
+     * Remove unmatched parentheses stuck to words, but leave
+     * HipChat emoticons (mindblown)
+     * and slack emoticons :cool:
      * and smiley faces :) :( (: ): ;) :P
      */
-    public  List<String> removeUnmatchedParentheses(List<String> sentence) {
+    public  List<String> removeUnmatchedParenthesesAndColons(List<String> sentence) {
         ListIterator<String> it = sentence.listIterator();
         while (it.hasNext()) {
             String word = it.next().trim();
@@ -166,8 +267,13 @@ public class TextUtils {
             // a smiley face, hooray
             if (
                     word.equals(":)") ||
+                    word.equals(":(") ||
                     word.equals("(:") ||
                     word.equals(";)") ||
+                    word.equals(";-)") ||
+                    word.equals(":'(") ||
+                    word.equals(":-(") ||
+                    word.equals(":-D)") ||
                     word.toLowerCase().equals(":p") ||
                     word.equals(":-)"))
             {
@@ -183,20 +289,16 @@ public class TextUtils {
                 // "else)"
                 it.set(word.replace(")", ""));
             }
-        }
 
-        return sentence;
-    }
-
-    public List<String> removeBotCommands(List<String> sentence) {
-        StringBuilder sb = new StringBuilder();
-
-        for (String word : sentence) {
-            sb.append(word.toLowerCase()).append(" ");
-        }
-        String recompiledSentence = sb.toString();
-        if (recompiledSentence.contains("image me") || recompiledSentence.contains("gif me") || recompiledSentence.contains("/gif")) {
-            sentence.clear();
+            // go away colons that aren't emoticons, do not want you
+            if (word.startsWith(":") && !word.endsWith(":")) {
+                // ":or"
+                it.set(word.replace(":", ""));
+            }
+            if (!word.startsWith(":") && word.endsWith(":")) {
+                // "else:"
+                it.set(word.replace(":", ""));
+            }
         }
 
         return sentence;
@@ -215,8 +317,8 @@ public class TextUtils {
     }
 
     /**
-     * "Handle" means either remove or space it out into its own word.
-     * Useful when combined with reattachPunctuation()
+     * Remove punctuation that does not contribute to sentence or word meaning
+     * or that will lose its buddy when markovified, like double quotes
      */
     public List<String> handlePunctuation(List<String> sentence) {
         ListIterator<String> it = sentence.listIterator();
@@ -234,6 +336,24 @@ public class TextUtils {
                 continue;
             }
 
+            // remove colons that are all alone
+            if(word.equals(":")) {
+                it.remove();
+                continue;
+            }
+
+            // remove parentheses that are all alone
+            if(word.equals("(") || word.equals(")")) {
+                it.remove();
+                continue;
+            }
+
+            // remove ellipses that are all alone
+            if(word.equals("...")) {
+                it.remove();
+                continue;
+            }
+
             if (word.startsWith("'")) {
                 word = word.substring(1);
             }
@@ -245,6 +365,24 @@ public class TextUtils {
 
             // write the modified word back into the list
             it.set(word);
+
+        }
+
+        return sentence;
+    }
+
+    /**
+     * When we find punctuation attached to a word, make it its own word. Internal punctuation stays put
+     * e.g.
+     * Howdy! -> Howdy !
+     *
+     * Useful when combined with reattachPunctuation() after generation
+     */
+    public List<String> spaceOutPunctuation(List<String> sentence) {
+        ListIterator<String> it = sentence.listIterator();
+
+        while (it.hasNext()) {
+            String word = it.next().trim();
 
             // space out delimiter punctuation like periods and semicolons
             Matcher m = ENDING_PUNCTUATION_REGEX.matcher(word);
@@ -261,9 +399,7 @@ public class TextUtils {
                     it.add(group); // add the found punctuation as a standalone token
                 }
             }
-
         }
-
         return sentence;
     }
 

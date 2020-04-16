@@ -2,7 +2,9 @@
 
 ## Markoverator
 
-Backwards/forwards Markov text generator specific to HipChat logs. Can generate sentences around a specified seed word or words.
+Backwards/forwards Markov text generator. Can generate sentences around a specified seed word or words.
+
+Text cleaning and processing utils that are especially friendly to Slack and Hipchat content.
 
 The expected corpus should be one message or sentence per line in a txt file.:sparkles: Currently the TextUtils can be used to take raw chat sentences and remove the @mentions and URLs while leaving the emoticons.  It can also tokenize or remove punctuation. Now you have cleaned sentences.
 
@@ -74,6 +76,6 @@ prerequisites are [Git](https://help.github.com/articles/set-up-git) and JDK 1.7
 #### install all jars into your local Maven cache
 `./gradlew install`
 
-###License
+### License
 This module is released under version 2.0 of the
 [Apache License](http://www.apache.org/licenses/LICENSE-2.0).

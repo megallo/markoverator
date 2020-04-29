@@ -106,8 +106,8 @@ public class BigrammerTest {
         List<String> generated = bigrammer.generateRandomForwards("pardner");
         Assert.assertEquals(expected, generated);
 
-        expected = Lists.newArrayList("howdy", "pardner");
-        generated = bigrammer.generateRandomForwards("howdy");
+        expected = Lists.newArrayList("I", "reckon");
+        generated = bigrammer.generateRandomForwards("I");
          Assert.assertEquals(expected, generated);
     }
 

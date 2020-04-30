@@ -35,9 +35,9 @@ public class BigrammerTest {
         bigrammer = new Bigrammer();
         bigrammer.buildModel(Arrays.asList(
                 Arrays.asList("howdy", "y'all", ".", "How", "are", "ya", "?"),
-                Arrays.asList("howdy", "pardner"),
-                Arrays.asList("keep", "yer", "boots", "on"),
-                Arrays.asList("I", "reckon")
+                Arrays.asList(",", "howdy", "pardner"),
+                Arrays.asList("keep", "yer", "!", "boots", "on"),
+                Arrays.asList(".", "I", "reckon")
         ));
     }
 
@@ -51,13 +51,12 @@ public class BigrammerTest {
         generated = bigrammer.generatePhraseWithKnownPair("howdy", "pardner");
         Assert.assertEquals(expected, generated);
 
-        // I don't *like* this but it is determined by ending goodness which we are not testing here
-        expected = Lists.newArrayList("howdy", "y'all", ".", "How", "are");
+        expected = Lists.newArrayList("howdy", "y'all", ".");
         generated = bigrammer.generatePhraseWithKnownPair("howdy", "y'all");
         Assert.assertEquals(expected, generated);
 
         expected = Lists.newArrayList("I", "reckon");
-        generated = bigrammer.generatePhraseWithKnownPair(DELIM, "I");
+        generated = bigrammer.generatePhraseWithKnownPair(".", "I");
         Assert.assertEquals(expected, generated);
 
         expected = Lists.newArrayList("howdy", "y'all", ".", "How", "are", "ya", "?");
@@ -80,9 +79,9 @@ public class BigrammerTest {
         Assert.assertEquals(expected, generated);
 
         // this is more subjective and addresses appropriate sentence endings. save it for a different refactor
-//        expected = Lists.newArrayList("howdy", "y'all", ".", "How", "are", "ya", "?");
-//        generated = bigrammer.generateRandom("howdy", "y'all");
-//        Assert.assertEquals(expected, generated);
+        expected = Lists.newArrayList("howdy", "y'all", ".");
+        generated = bigrammer.generateRandom("howdy", "y'all");
+        Assert.assertEquals(expected, generated);
     }
 
     @Test
@@ -133,7 +132,7 @@ public class BigrammerTest {
         Assert.assertEquals(expected, generated);
 
         // does not run over DELIM even though it's allowed to
-        expected = Lists.newArrayList("keep", "yer", "boots", "on");
+        expected = Lists.newArrayList("keep", "yer", "!", "boots", "on");
         generated = bigrammer.generateRandomBackwards("on", 4, 8);
         Assert.assertEquals(expected, generated);
 
@@ -160,7 +159,7 @@ public class BigrammerTest {
         List<String> forward = bigrammer.generateForwardText("pardner", DELIM);
         Assert.assertEquals(expected, forward);
 
-        expected = Lists.newArrayList(DELIM, "keep", "yer", "boots", "on");
+        expected = Lists.newArrayList(DELIM, "keep", "yer", "!");
         forward = bigrammer.generateForwardText(DELIM, "keep");
         Assert.assertEquals(expected, forward);
     }
@@ -181,6 +180,19 @@ public class BigrammerTest {
     }
 
     @Test
+    public void testBackwardsGenerationBadParams() {
+        // 8 > 4
+        List<String> expected = Lists.newArrayList("keep", "yer");
+        List<String> back = bigrammer.generateBackwardText("keep", "yer", 8, 4);
+        Assert.assertEquals(expected, back);
+
+        // 8 > 0
+        expected = Lists.newArrayList();
+        back = bigrammer.generateRandomBackwards("yer", 8, 0);
+        Assert.assertEquals(expected, back);
+    }
+
+    @Test
     public void testBackwardsGenerationWordCount() {
         List<String> expected = Lists.newArrayList("howdy", "y'all", ".", "How", "are");
         List<String> back = bigrammer.generateBackwardText("How", "are", 0, 5);
@@ -194,11 +206,14 @@ public class BigrammerTest {
         back = bigrammer.generateBackwardText("How", "are", 0, 6);
         Assert.assertEquals(expected, back);
 
+        back = bigrammer.generateBackwardText("How", "are", 0, 200);
+        Assert.assertEquals(expected, back);
+
         expected = Lists.newArrayList("y'all", ".", "How", "are");
         back = bigrammer.generateBackwardText("How", "are", 0, 4);
         Assert.assertEquals(expected, back);
 
-        expected = Lists.newArrayList(".", "How", "are");
+        expected = Lists.newArrayList("How", "are");
         back = bigrammer.generateBackwardText("How", "are", 0, 3);
         Assert.assertEquals(expected, back);
 
@@ -238,53 +253,4 @@ public class BigrammerTest {
         Assert.assertFalse(bigrammer.isDecentEndingWord(nope4));
     }
 
-    /**** testing simple ****/
-
-
-    @Test
-    public void testsssBackwardsGeneration() {
-        // default maxHalfLength is 8, so this stops because of DELIM
-        List<String> expected = Lists.newArrayList("howdy", "y'all", ".", "How", "are");
-        List<String> back = bigrammer.generateBackwardTextSimple("How", "are", 0, 8);
-        Assert.assertEquals(expected, back);
-    }
-
-    @Test
-    public void testsssBackwardsGenerationDELIM() {
-        List<String> expected = Lists.newArrayList(DELIM, "howdy");
-        List<String> back = bigrammer.generateBackwardTextSimple(DELIM, "howdy", 0, 8);
-        Assert.assertEquals(expected, back);
-
-        expected = Lists.newArrayList("howdy", "y'all", ".", "How", "are", "ya", "?", DELIM);
-        back = bigrammer.generateBackwardTextSimple("?", DELIM, 0, 8);
-        Assert.assertEquals(expected, back);
-
-    }
-
-    @Test
-    public void testssssBackwardsGenerationWordCount() {
-        List<String> expected = Lists.newArrayList("howdy", "y'all", ".", "How", "are");
-        List<String> back = bigrammer.generateBackwardTextSimple("How", "are", 0, 5);
-        Assert.assertEquals(expected, back);
-
-        for (int minWordCount = 0; minWordCount <= 5; minWordCount++) {
-            back = bigrammer.generateBackwardTextSimple("How", "are", minWordCount, 5);
-            Assert.assertEquals(expected, back);
-        }
-
-        back = bigrammer.generateBackwardTextSimple("How", "are", 0, 6);
-        Assert.assertEquals(expected, back);
-
-        expected = Lists.newArrayList("y'all", ".", "How", "are");
-        back = bigrammer.generateBackwardTextSimple("How", "are", 0, 4);
-        Assert.assertEquals(expected, back);
-
-        expected = Lists.newArrayList(".", "How", "are");
-        back = bigrammer.generateBackwardTextSimple("How", "are", 0, 3);
-        Assert.assertEquals(expected, back);
-
-        expected = Lists.newArrayList("How", "are");
-        back = bigrammer.generateBackwardTextSimple("How", "are", 0, 2);
-        Assert.assertEquals(expected, back);
-    }
 }

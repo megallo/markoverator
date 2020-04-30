@@ -34,6 +34,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Stack;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Build a bigram markov model out of sentences for random text generation
@@ -48,6 +50,9 @@ public class Bigrammer {
 
     private int maxHalfLength = 8;
     final static String DELIM = "<DELIM>";
+
+    private Pattern BAD_BEGINNING_PUNCTUATION_REGEX = Pattern.compile("[\\.!\\?,;]+");
+    private Pattern GOOD_ENDING_PUNCTUATION_REGEX = Pattern.compile("[\\.!\\?]+");
 
     private BigramModel model = null;
     private Map<String, List<Integer>> wordIndexMap; // calculated, so not part of the model object
@@ -142,6 +147,12 @@ public class Bigrammer {
         return null;
     }
 
+    /**
+     * If you're trying to make a poem and don't care too much about length,
+     * this is the method for you
+     * @param seedWord any word you want
+     * @return null if that word is not in the model
+     */
     public List<String> generateRandomBackwards(String seedWord) {
         return generateRandomBackwards(seedWord, 0, maxHalfLength);
     }
@@ -150,7 +161,7 @@ public class Bigrammer {
      * Attempts to find the exact word you're looking for,
      * and generate a sentence ending with that word.
      * Useful if you're trying to make poetry.
-     * @return null if exact string is not found or an empty list if we found it but couldn't meet the min reqs. Try again?
+     * @return null if seed word is not in model, or an empty list if we found it but couldn't meet the min reqs. Try again?
      */
     public List<String> generateRandomBackwards(String seedWord, int minWordCount, int maxWordCount) {
         if (model == null) {
@@ -164,6 +175,10 @@ public class Bigrammer {
             String wordBeforeSeed = model.getFullWordList().get(chosenRandomLocation - 1);
 
             List<String> backwardText = generateBackwardText(wordBeforeSeed, seedWord, minWordCount, maxWordCount);
+
+            // TODO we counted DELIM as part of the word count during generation,
+            //  but now we remove it and then count again and that's not really fair
+
             backwardText.removeAll(Lists.newArrayList(DELIM));
 
             if (backwardText.size() >= minWordCount && backwardText.size() <= maxWordCount) {
@@ -212,11 +227,11 @@ public class Bigrammer {
         List<String> backwardText = generateBackwardText(w1, w2); // includes seed words at end
         List<String> forwardText = generateForwardText(w1, w2);   // includes seed words at beginning
 
-        List<String> finalText = backwardText.subList(0, backwardText.size() - 2); // remove seed words
-        finalText.addAll(forwardText); // and mush 'em together
+        // we mucked with backwardText, so remove the seed words from forwardText
+        backwardText.addAll(forwardText.subList(2, forwardText.size())); // remove seed words and mush 'em together
         // you need to remove the DELIMS here! right here! DELIM can appears in w1 or w2
-        finalText.removeAll(Lists.newArrayList(DELIM));
-        return finalText;
+        backwardText.removeAll(Lists.newArrayList(DELIM));
+        return backwardText;
     }
 
     @VisibleForTesting
@@ -233,6 +248,10 @@ public class Bigrammer {
         while (generated.size() <= maxHalfLength) {
 
             List<String> nextWordOptions = model.getForwardCache().get(new Pair(word1, word2));
+
+            if (nextWordOptions == null) {
+                break;
+            }
             // choose a random possible next word based on the two given ones
             String nextWord = nextWordOptions.get(random.nextInt(nextWordOptions.size()));
 
@@ -258,6 +277,9 @@ public class Bigrammer {
         return generated;
     }
 
+    /**
+     * Used internally as a pass-through from generatePhraseWithKnownPair with default sizes
+     */
     List<String> generateBackwardText(String word2, String word3) {
         return generateBackwardText(word2, word3, 0, maxHalfLength);
     }
@@ -273,43 +295,6 @@ public class Bigrammer {
             return generated;
         }
 
-        boolean push3 = true;
-        while ((generated.size() <= minWordCount) || (generated.size() < maxWordCount - 2)) {
-            generated.push(word3);
-            List<String> prevWordOptions = model.getBackwardCache().get(new Pair(word2, word3));
-            if (prevWordOptions == null) {
-                // we have exhausted our options but we didn't meet the minimum size requirement
-                // return something useful to indicate that we tried
-                return new Stack<>();
-            }
-            String word1 = prevWordOptions.get(random.nextInt(prevWordOptions.size()));
-            if (word1.equals(DELIM)) {
-                push3 = false;
-                break;
-            }
-            word3 = word2;
-            word2 = word1;
-        }
-        if (push3) {  // solves the case where we lose the second-to-last word if we stop due to the while clause
-            generated.push(word3);
-        }
-        generated.push(word2); // generated always gets the last word.
-
-        return Lists.reverse(generated);
-    }
-
-    // TODO this is much easier to read, add tests to verify behavior is same as other method
-    @VisibleForTesting
-    List<String> generateBackwardTextSimple(String word2, String word3, int minWordCount, int maxWordCount) {
-        Stack<String> generated = new Stack<>();
-
-        // handle edge cases separately
-        if (maxWordCount == 2 || word2.equals(DELIM)) {
-            generated.push(word2);
-            generated.push(word3);
-            return generated;
-        }
-
         generated.push(word3);
         generated.push(word2);
 
@@ -317,24 +302,29 @@ public class Bigrammer {
             List<String> prevWordOptions = model.getBackwardCache().get(new Pair(word2, word3));
             if (prevWordOptions == null) {
                 // we have exhausted our options but we didn't meet the minimum size requirement
-                // return something useful to indicate that we tried
-                return new Stack<>();
+                // but let the calling method decide if it is the right length or not
+                return generated;
             }
             String word1 = prevWordOptions.get(random.nextInt(prevWordOptions.size()));
 
-            // TODO end based on POS tag - make a method that checks end (beginning) condition - it's pretty common to start with a comma because we stripped out @mentions
-            if (word1.equals(DELIM)) {
-                break;
-            }
-
             generated.push(word1);
 
-            if (generated.size() >= maxWordCount) {
+            if (checkBeginCondition(generated)) {
                 break;
             }
 
             word3 = word2;
             word2 = word1;
+        }
+
+        // remove any leading punctuation from the beginning
+        if (generated.peek().equals(DELIM)) {
+            generated.pop();
+        }
+
+        Matcher m = BAD_BEGINNING_PUNCTUATION_REGEX.matcher(generated.peek());
+        if (m.matches()) {
+            generated.pop();
         }
 
         return Lists.reverse(generated);
@@ -399,22 +389,53 @@ public class Bigrammer {
     }
 
     /**
+     * Return true if this should be the beginning of the sentence.
+     * @param words a sentence
+     */
+    private boolean checkBeginCondition(Stack<String> words) {
+        // pass the min size in?
+
+        String endWord = words.peek();
+
+        if (endWord.equals(DELIM)) {
+            return true;
+        }
+
+        // yeah this is silly, because it's going to return false regardless
+        // but if we want more validation later then just be explicit
+        Matcher m = BAD_BEGINNING_PUNCTUATION_REGEX.matcher(endWord);
+        if (m.matches()) {
+            return false;
+        }
+
+        return false;
+    }
+
+    /**
      * Return true if this should be the end of the sentence.
      * @param words a sentence
      */
     private boolean checkEndCondition(List<String> words) {
         // check length
-        if (words.size() > maxHalfLength) {
+        if (words.size() >= maxHalfLength) {
             return true;
         }
 
+        String endWord = words.get(words.size()-1);
+
+        if (endWord.equals(DELIM)) {
+            return true;
+        }
+
+        Matcher m = GOOD_ENDING_PUNCTUATION_REGEX.matcher(endWord);
+        if (m.matches()) {
+            return true;
+        }
         // TODO pretty sure this approach is garbage, how about just check for a delimiter or punctuation
         // starting partway through, figure out a good word to end on
-        if ((words.size() > maxHalfLength /2 && isDecentEndingWord(words))) {
+        if ((words.size() > maxHalfLength/2 && isDecentEndingWord(words))) {
             return true;
         }
-
-        // TODO where is a good place to check for a period and call this a finished sentence? RIGHT NOW
 
         // not ready yet, keep going
         return false;
@@ -437,6 +458,7 @@ public class Bigrammer {
                 endWord.equals("he")  ||
                 endWord.equals("we")  ||
                 endWord.equals("they") ||
+                endWord.equals("i've") ||
                 endWord.equals("just") ||   // I don't want to filter out all RB (adverbs), so this is stupid and I want to come up with a smarter thing
                 endWord.endsWith(","))      // in reality this is its own word, but let's not assume that here
                 {

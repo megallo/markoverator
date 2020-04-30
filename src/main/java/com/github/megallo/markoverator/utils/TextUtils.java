@@ -41,6 +41,7 @@ public class TextUtils {
             Pattern.compile("[\\.!\\?,;]+$");
     private static final Pattern REATTACH_PUNCTUATION_REGEX =
             Pattern.compile("[\\.!\\?,;:]+");
+    private static final String PARENTHESES_REGEX = "[()]";
 
     // TODO make a regex to remove logging and stack traces
 
@@ -51,7 +52,6 @@ public class TextUtils {
      * @return tokenized and cleaned string
      */
     public List<String> cleanUpLine(String sentence) {
-        loggie.info(sentence);
         String[] split = sentence.split("\\s+"); // break on whitespace
         List<String> splitSentence = new LinkedList<>(Arrays.asList(split));
 
@@ -81,6 +81,7 @@ public class TextUtils {
         splitSentence = removeRedundantPunctuation(splitSentence);
         // remove parentheses after other punctuation
         splitSentence = removeUnmatchedParenthesesAndColons(splitSentence);
+        // if you have hipchat logs, you may be interested in convertHipchatToSlackEmoticons()
         splitSentence = removeEmptyWords(splitSentence);
 
         if (loggie.isDebugEnabled()) {
@@ -222,9 +223,14 @@ public class TextUtils {
     /**
      * Remove punctuation that comes before other punctuation
      * Looking at cases where we removed the @mention and left a weird string, like
-     * Happy birthday , !!
+     *   Happy birthday , !!
      * but NOT
-     * happy birthday ! :cupcake:
+     *   happy birthday ! :cupcake:
+     * and it will remove ALL repetitive punctuation up until the last one, so
+     *   . . . . . wat
+     * becomes
+     *   . wat
+     * (for better or worse)
      */
     public List<String> removeRedundantPunctuation(List<String> sentenceTokens) {
 
@@ -233,13 +239,14 @@ public class TextUtils {
         }
 
         for (int i = 1; i < sentenceTokens.size(); i++) {
-            // start with 1 so we don't try to reattach to a previous at index 0
+            // start with 1 so we don't try to look back to a previous at index 0
             String word = sentenceTokens.get(i);
             String previousWord = sentenceTokens.get(i-1);
             Matcher m = ENDING_PUNCTUATION_REGEX.matcher(word);
             Matcher m2 = ENDING_PUNCTUATION_REGEX.matcher(previousWord);
             if (m.matches() && m2.matches()) { // we only want to keep one punctuation, the last one
                 sentenceTokens.remove(i-1);
+                i--; // back up, you just shifted i-n down one index
             }
         }
 
@@ -247,6 +254,24 @@ public class TextUtils {
 
     }
 
+    /**
+     * Convert HipChat emoticons (mindblown)
+     * to slack emoticons :palm_tree:
+     */
+    public  List<String> convertHipchatToSlackEmoticons(List<String> sentence) {
+        ListIterator<String> it = sentence.listIterator();
+        while (it.hasNext()) {
+            String word = it.next().trim();
+
+            // an emoticon, hooray. convert to slack
+            if (word.startsWith("(") && word.endsWith(")")) {
+                word = word.replaceAll(PARENTHESES_REGEX, ":");
+                it.set(word);
+            }
+        }
+
+        return sentence;
+    }
 
     /**
      * Remove unmatched parentheses stuck to words, but leave
@@ -259,7 +284,7 @@ public class TextUtils {
         while (it.hasNext()) {
             String word = it.next().trim();
 
-            // an emoticon, hooray
+            // assume this is just a word in parentheses
             if (word.startsWith("(") && word.endsWith(")")) {
                 continue;
             }
@@ -273,9 +298,12 @@ public class TextUtils {
                     word.equals(";-)") ||
                     word.equals(":'(") ||
                     word.equals(":-(") ||
-                    word.equals(":-D)") ||
-                    word.toLowerCase().equals(":p") ||
-                    word.equals(":-)"))
+                    word.equals(":-D") ||
+                    word.equals(":-)") ||
+                    word.equals(":D") ||
+                    word.equals(":d") ||
+                    word.equals(":p") ||
+                    word.equals(":P"))
             {
                 continue;
             }
@@ -283,22 +311,24 @@ public class TextUtils {
             // part of a parenthetical phrase, noooo
             if (word.startsWith("(") && !word.endsWith(")")) {
                 // "(or"
-                it.set(word.replace("(", ""));
+                word = word.replace("(", "");
             }
             if (!word.startsWith("(") && word.endsWith(")")) {
                 // "else)"
-                it.set(word.replace(")", ""));
+                word = word.replace(")", "");
             }
 
             // go away colons that aren't emoticons, do not want you
             if (word.startsWith(":") && !word.endsWith(":")) {
                 // ":or"
-                it.set(word.replace(":", ""));
+                word = word.replace(":", "");
             }
             if (!word.startsWith(":") && word.endsWith(":")) {
                 // "else:"
-                it.set(word.replace(":", ""));
+                word = word.replace(":", "");
             }
+
+            it.set(word);
         }
 
         return sentence;
@@ -356,6 +386,10 @@ public class TextUtils {
 
             if (word.startsWith("'")) {
                 word = word.substring(1);
+            }
+
+            if (word.endsWith("'")) {
+                word = word.substring(0, word.length()-1);
             }
 
             // remove multi-word-spanning stuff like quotation marks and ellipses

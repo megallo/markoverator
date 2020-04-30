@@ -140,7 +140,7 @@ public class TextUtilTest {
 
     @Test
     public void testParensAndColons() {
-        String withParens = "(go see, ok?) (:whatever:) :shrug: (awthanks) :) ;) :P :-) :cake::cake:cake:";
+        String withParens = "(go see, ok?) (:whatever:) :shrug: (awthanks) :) ;) :P :-) :cake::cake:cake: not:this";
         List<String> withoutParens = new LinkedList<>();
         withoutParens.add("go");
         withoutParens.add("see,");
@@ -153,6 +153,7 @@ public class TextUtilTest {
         withoutParens.add(":P");
         withoutParens.add(":-)");
         withoutParens.add(":cake::cake:cake:");
+        withoutParens.add("not:this");
 
         Assert.assertEquals(withoutParens, textUtils.removeUnmatchedParenthesesAndColons(Arrays.asList(withParens.split("\\s+"))));
     }

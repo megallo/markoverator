@@ -273,11 +273,62 @@ public class TextUtils {
         return sentence;
     }
 
+    @Deprecated
+    // will be removed in version 3
+    // use removeUnmatchedParenthesesAndColons()
+    public  List<String> removeUnmatchedParentheses(List<String> sentence) {
+        ListIterator<String> it = sentence.listIterator();
+        while (it.hasNext()) {
+            String word = it.next().trim();
+
+            // assume this is just a word in parentheses
+            if (word.startsWith("(") && word.endsWith(")")) {
+                continue;
+            }
+
+            // a smiley face, hooray
+            if (
+                    word.equals(":)") ||
+                            word.equals(":(") ||
+                            word.equals("(:") ||
+                            word.equals(";)") ||
+                            word.equals(";-)") ||
+                            word.equals(":'(") ||
+                            word.equals(":-(") ||
+                            word.equals(":-D") ||
+                            word.equals(":-)") ||
+                            word.equals(":D") ||
+                            word.equals(":d") ||
+                            word.equals(":p") ||
+                            word.equals(":P"))
+            {
+                continue;
+            }
+
+            // part of a parenthetical phrase, noooo
+            if (word.startsWith("(") && !word.endsWith(")")) {
+                // "(or"
+                word = word.replace("(", "");
+            }
+            if (!word.startsWith("(") && word.endsWith(")")) {
+                // "else)"
+                word = word.replace(")", "");
+            }
+
+            it.set(word);
+        }
+
+        return sentence;
+
+        }
+
     /**
      * Remove unmatched parentheses stuck to words, but leave
      * HipChat emoticons (mindblown)
      * and slack emoticons :cool:
      * and smiley faces :) :( (: ): ;) :P
+     *
+     * It does not remove anything from inside the word, just from the ends
      */
     public  List<String> removeUnmatchedParenthesesAndColons(List<String> sentence) {
         ListIterator<String> it = sentence.listIterator();
@@ -286,6 +337,10 @@ public class TextUtils {
 
             // assume this is just a word in parentheses
             if (word.startsWith("(") && word.endsWith(")")) {
+                continue;
+            }
+
+            if (word.startsWith(":") && word.endsWith(":")) {
                 continue;
             }
 
@@ -329,6 +384,22 @@ public class TextUtils {
             }
 
             it.set(word);
+        }
+
+        return sentence;
+    }
+
+    @Deprecated
+    // will be removed in version 3
+    public List<String> removeBotCommands(List<String> sentence) {
+        StringBuilder sb = new StringBuilder();
+
+        for (String word : sentence) {
+            sb.append(word.toLowerCase()).append(" ");
+        }
+        String recompiledSentence = sb.toString();
+        if (recompiledSentence.contains("image me") || recompiledSentence.contains("gif me") || recompiledSentence.contains("/gif")) {
+            sentence.clear();
         }
 
         return sentence;

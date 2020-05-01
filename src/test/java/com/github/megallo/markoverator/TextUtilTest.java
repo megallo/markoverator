@@ -116,19 +116,44 @@ public class TextUtilTest {
     }
 
     @Test
+    public void testRemoveRedundantPunctuation() {
+        String withPunc = "... , . ! Hey , , ! How's it ... going? ? (awwyiss) :) ? ?";
+        LinkedList<String> split = new LinkedList<>(Arrays.asList(withPunc.split("\\s+")));
+
+        List<String> fixedPunc = new LinkedList<>();
+        fixedPunc.add("!");
+        fixedPunc.add("Hey");
+        // no commas
+        fixedPunc.add("!");
+        fixedPunc.add("How's");
+        fixedPunc.add("it");
+        fixedPunc.add("...");
+        fixedPunc.add("going?");
+        fixedPunc.add("?"); // not removed because no standalone punc around it
+        fixedPunc.add("(awwyiss)");
+        fixedPunc.add(":)");
+        fixedPunc.add("?");
+
+        Assert.assertEquals(fixedPunc, textUtils.removeRedundantPunctuation(split));
+
+    }
+
+    @Test
     public void testParensAndColons() {
-        String withParens = "(go see, ok?) :shrug: (awthanks) :) ;) :P :-) :cake::cake:cake:";
+        String withParens = "(go see, ok?) (:whatever:) :shrug: (awthanks) :) ;) :P :-) :cake::cake:cake: not:this";
         List<String> withoutParens = new LinkedList<>();
         withoutParens.add("go");
         withoutParens.add("see,");
         withoutParens.add("ok?");
+        withoutParens.add("(:whatever:)"); // shrug, there's only so much I can do
         withoutParens.add(":shrug:");
-        withoutParens.add("(awthanks)");
+        withoutParens.add("(awthanks)"); // single-word parentheses conversion got moved to convertHipchatToSlackEmoticons()
         withoutParens.add(":)");
         withoutParens.add(";)");
         withoutParens.add(":P");
         withoutParens.add(":-)");
         withoutParens.add(":cake::cake:cake:");
+        withoutParens.add("not:this");
 
         Assert.assertEquals(withoutParens, textUtils.removeUnmatchedParenthesesAndColons(Arrays.asList(withParens.split("\\s+"))));
     }
@@ -208,6 +233,26 @@ public class TextUtilTest {
         fixedPunc.add(":facepalm:,");
 
         Assert.assertEquals(fixedPunc, textUtils.handlePunctuation(origSplit));
+    }
+
+    @Test
+    public void testHipchatToSlackEmoticons() {
+        String orig = "(sure) \"now?\" 'hey wat, (ok ok) (disappear) ' 'whatevs :facepalm:,";
+        LinkedList<String> origSplit = new LinkedList<>(Arrays.asList(orig.split("\\s+")));
+
+        List<String> fixedPunc = new LinkedList<>();
+        fixedPunc.add(":sure:");
+        fixedPunc.add("\"now?\"");
+        fixedPunc.add("'hey");
+        fixedPunc.add("wat,");
+        fixedPunc.add("(ok");
+        fixedPunc.add("ok)");
+        fixedPunc.add(":disappear:");
+        fixedPunc.add("'");
+        fixedPunc.add("'whatevs");
+        fixedPunc.add(":facepalm:,");
+
+        Assert.assertEquals(fixedPunc, textUtils.convertHipchatToSlackEmoticons(origSplit));
     }
 
     @Test

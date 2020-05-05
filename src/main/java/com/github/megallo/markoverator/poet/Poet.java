@@ -82,7 +82,7 @@ public class Poet {
 
     public void initializeDictionaries(InputStream cmuDictStream, InputStream cmuPhonesStream, InputStream cmuSymbolsStream, InputStream extraDictStream) {
         try {
-            populatePhonemes(cmuPhonesStream, cmuSymbolsStream); // do this first to get the vowels
+            populatePhonemes(cmuPhonesStream); // do this first to get the vowels
             populateCmuMap(cmuDictStream);
             if (extraDictStream != null) {
                 populateCmuMap(extraDictStream);
@@ -188,10 +188,13 @@ public class Poet {
 
                     // TODO do something with the words like prestigious(1). I don't care enough to look up multiple
                     // pronunciations, but I want all of them to be stored in the reverse lookup map. I think that's ok?
+                    // I think this can be done if you calculate and store all rhyming sections and put all pronunciations under the same lookup key
                     wordPhonemes.put(word, phonemes);  // TODO you could just store the rhyming section of a word instead of the whole phoneme set of the word, so you don't have to recalculate the rhyming section on lookup
                     // that makes so much sense, why I am not doing that already. it saves calculation on lookup and also storage in memory
 
                     String lastNPhonemes = getRhymingSection(phonemes);
+                    // so here you will iterate over the various rhyme lengths and put them in both wordPhonemes and endingPhonemesWords
+                    // but make sure they're ordered from longest to shortest
 
                     List<String> wordsForThisPhoneme;
                     if (endingPhonemesWords.containsKey(lastNPhonemes)) {
@@ -200,10 +203,8 @@ public class Poet {
                         wordsForThisPhoneme = new ArrayList<>();
                         endingPhonemesWords.put(lastNPhonemes, wordsForThisPhoneme);
                     }
-                    // TODO remove punctuation from words, e.g. PRESTIGIOUS(1)
-                    // TODO remove punctuation from words, e.g. "quote
-                    wordsForThisPhoneme.add(removeWordCounter(word));
 
+                    wordsForThisPhoneme.add(removeWordCounter(word));
                 }
             }
         }
@@ -245,30 +246,18 @@ public class Poet {
 
     @VisibleForTesting
     protected String removeWordCounter(String originalWord) {
-        // TODO this doesn't work
-        String[] split = originalWord.split("\\(\\d\\)");
-        return split[0];
+        return originalWord.replaceAll("\\(\\d\\)", "");
     }
 
-    private void populatePhonemes(InputStream phonemesStream, InputStream symbolsStream) throws IOException {
-        // TODO you can remove the symbolStream and this code block once you've committed to not using the emphasis markers
-//        List<String> allSymbols = new ArrayList<>();
-//
-//        // read the symbols and then transfer them into the vowels set based on the phonemes input
-//        try (BufferedReader reader = new BufferedReader(new InputStreamReader(symbolsStream))) {
-//            String line;
-//            while ((line = reader.readLine()) != null) {
-//                if (!line.startsWith(cmuDictComment)) {
-//                    allSymbols.add(line.trim());
-//                }
-//            }
-//        }
+    private void populatePhonemes(InputStream phonemesStream) throws IOException {
 
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(phonemesStream))) {
             String line;
             // A line looks like
             // AE	vowel
             // TH	fricative
+            //  G	stop
+            // HH	aspirate
             // and we only want the vowels
             while ((line = reader.readLine()) != null) {
                 if (!line.startsWith(cmuDictComment)) {
@@ -278,18 +267,6 @@ public class Poet {
                     String phonemeType = split[1];
                     if (phonemeType.equals("vowel")) {
                         vowels.add(phonemeBase);
-//                  // TODO wait a sec, I think this was doing the same thing as Socher in the limerick blog, where I don't remove the number from the vowel. Holy shit
-//                     for (String symbol : allSymbols) {
-//                            // symbols are like AA1 and EH0 but phoneme-to-type mapping is AA EH
-//                            // so if the unique symbols start with a base that's marked as a vowel
-//                            // add it to the master vowel lookup set
-//                            // that way later we don't have to do a .startsWith() comparison on every word's phonemes
-//
-
-//                            if (symbol.startsWith(phonemeBase)) {
-//                                vowels.add(symbol);
-//                            }
-//                        }
                     }
                 }
             }

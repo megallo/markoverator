@@ -64,4 +64,20 @@ public class PoetTest {
         expected = "AH";
         Assert.assertEquals(expected, poet.getRhymingSection(input));
     }
+
+    @Test
+    public void testRemoveWordCounter() {
+        String expected = "OPHTHALMOLOGY";
+        Assert.assertEquals(expected, poet.removeWordCounter("OPHTHALMOLOGY(1)"));
+
+        expected = "ZYUGANOV'S";
+        Assert.assertEquals(expected, poet.removeWordCounter("ZYUGANOV'S(1)"));
+
+        expected = "(BEGIN-PARENS";
+        Assert.assertEquals(expected, poet.removeWordCounter("(BEGIN-PARENS"));
+
+        expected = ")UN-PARENTHESES";
+        Assert.assertEquals(expected, poet.removeWordCounter(")UN-PARENTHESES"));
+
+    }
 }

@@ -5,6 +5,7 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.List;
 
 public class PoetTest {
@@ -15,7 +16,7 @@ public class PoetTest {
     private static final String realSymbols = "/com/github/megallo/markoverator/poet/cmudict-0.7b-symbols.txt";
 
     @BeforeClass
-    public static void setup() {
+    public static void setup() throws IOException {
         poet = new Poet(
                 PoetTest.class.getResourceAsStream(mockDict),
                 PoetTest.class.getResourceAsStream(realPhones),
@@ -27,41 +28,30 @@ public class PoetTest {
         super();
     }
 
-    /**
-     * Verify that the same algorithm that creates rhymes is also used by the rhyme looker-upper
-     */
-    @Test
-    public void testPutMatchesLookup() {
-        // CAT-O-NINE-TAILS
-        // K AE1 T OW0 N AY2 N T EY2 L Z
-        String expected = "cat-o-nine-tails";
-        Assert.assertEquals(expected, poet.findRhymingWords("CAT-O-NINE-TAILS").get(0));
-    }
-
     @Test
     public void testRhymingSection() {
         // CAT-O-NINE-TAILS
         // K AE1 T OW0 N AY2 N T EY2 L Z
-        List<String> input = Lists.newArrayList("K", "AE", "T", "OW", "N", "AY", "N", "T", "EY", "L", "Z");
-        String expected = "EYLZ";
+        List<String> input = Lists.newArrayList("K", "AE1", "T", "OW0", "N", "AY2", "N", "T", "EY2", "L", "Z");
+        String expected = "EY2LZ";
         Assert.assertEquals(expected, poet.getRhymingSection(input));
 
         // PONY
         // P OW1 N IY2
-        input = Lists.newArrayList("P", "OW", "N", "IY");
-        expected = "NIY";
+        input = Lists.newArrayList("P", "OW1", "N", "IY2");
+        expected = "NIY2";
         Assert.assertEquals(expected, poet.getRhymingSection(input));
 
         // PLAYS
         // P L EY1 Z
-        input = Lists.newArrayList("P", "L", "EY", "Z");
-        expected = "EYZ";
+        input = Lists.newArrayList("P", "L", "EY1", "Z");
+        expected = "EY1Z";
         Assert.assertEquals(expected, poet.getRhymingSection(input));
 
         // A
         // AH0
-        input = Lists.newArrayList("AH");
-        expected = "AH";
+        input = Lists.newArrayList("AH0");
+        expected = "AH0";
         Assert.assertEquals(expected, poet.getRhymingSection(input));
     }
 }

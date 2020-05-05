@@ -67,7 +67,7 @@ public class PoemGenerator {
         }
 
         loggie.info("Looking up words that rhyme with {}", poemTopicWord);
-        List<String> rhymingWords = poet.findRhymingWords(poemTopicWord); // returns a list including the target word
+        List<String> rhymingWords = poet.findRhymingWords(poemTopicWord);
 
         if (rhymingWords == null) {
             loggie.info("I don't know what rhymes with {} :(", poemTopicWord);
@@ -77,7 +77,6 @@ public class PoemGenerator {
         loggie.debug(rhymingWords.toString());
 
         Collections.shuffle(rhymingWords);
-        rhymingWords.remove(poemTopicWord);
 
         // count up to a configurable poem line count
         int lineCount = 0;
@@ -85,6 +84,9 @@ public class PoemGenerator {
         StringBuilder poem = new StringBuilder();
         // and now we just start trying to find words in the model
         for (String rhyme : rhymingWords) {
+            if (rhyme.equals(poemTopicWord)) {
+                continue; // the same word doesn't rhyme with itself, that's just silly
+            }
             String poemLine = makePoemLine(rhyme);
             if (poemLine != null) {
                 poem.append(poemLine).append("\n");
@@ -101,7 +103,7 @@ public class PoemGenerator {
 
     private String makePoemLine(String word) {
         List<String> tokens;
-        if ((tokens = bigrams.generateRandomBackwards(word, 3, 5)) != null) {
+        if ((tokens = bigrams.generateRandomBackwards(word)) != null) {
             // we found a word that is in the model
             return textUtils.stringify(textUtils.capitalizeInitialWord(textUtils.reattachPunctuation(tokens)));
         }

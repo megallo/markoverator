@@ -20,7 +20,7 @@ Example usage can be found in the [MarkovGenerator](src/main/java/com/github/meg
 The MarkovGenerator's main() method takes two arguments: a path to a corpus file, and the name of the output model file.
 The input corpus file contains one message per line, e.g.
 ```
-Test. Test. Is this thing on?
+:hieverybody: Test. Test. Is this thing on?
 (awwyiss)
 @here can someone take a look at that pull request
 /code 127.0.0.1:8080
@@ -32,7 +32,20 @@ Now you can made poems from your model! See example usage in [PoemGenerator](src
 So far it only rhymes on the last syllable. I hope to dig into the syllable information in the CMU dict next to make more interesting rhymes.
 
 ## Release Notes
-#### New in 2.1.0 :exclamation:
+
+#### New in 2.2.0 :exclamation:
+- Bigrammer updates: 
+  - Allow input sentences with fewer than three words
+  - New method to specify min/max word count during generation
+  - New method to modify max generated length on the fly
+  - Major bug and logic fixes
+- TextUtils updates:
+  - Add support for cleaning Slack corpus as well as Hipchat
+  - All-in-one convenience method
+  - Major cleaning upgrades 
+- So many tests!
+
+#### New in 2.1.0
 - Poet: find words that rhyme with a seed word
 - PoemGenerator: example usage of how to make a poem from your Bigrammer model based on a seed word
 
@@ -52,18 +65,18 @@ So far it only rhymes on the last syllable. I hope to dig into the syllable info
     <dependency>
       <groupId>com.github.megallo</groupId>
       <artifactId>markoverator</artifactId>
-      <version>2.1.0</version>
+      <version>2.2.0</version>
     </dependency>
 ```
 
 ### Gradle
 ```groovy
-    compile "com.github.megallo:markoverator:2.1.0"
+    compile "com.github.megallo:markoverator:2.2.0"
 ```
 
 ### Building from source
-This module uses a [Gradle](http://gradle.org)-based build system. In the instructions
-below, [`./gradlew`](http://vimeo.com/34436402) is invoked from the root of the source tree and serves as
+This module uses a [Gradle](https://gradle.org)-based build system. In the instructions
+below, [`./gradlew`](https://vimeo.com/34436402) is invoked from the root of the source tree and serves as
 a cross-platform, self-contained bootstrap mechanism for the build. The only
 prerequisites are [Git](https://help.github.com/articles/set-up-git) and JDK 1.7+.
 

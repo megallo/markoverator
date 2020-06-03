@@ -67,7 +67,7 @@ public class PoemGenerator {
         }
 
         loggie.info("Looking up words that rhyme with {}", poemTopicWord);
-        List<String> rhymingWords = poet.findRhymingWords(poemTopicWord);
+        List<String> rhymingWords = poet.findRhymingWords(poemTopicWord); // returns a list including the target word, if we know how to rhyme it
 
         if (rhymingWords == null) {
             loggie.info("I don't know what rhymes with {} :(", poemTopicWord);
@@ -77,6 +77,7 @@ public class PoemGenerator {
         loggie.debug(rhymingWords.toString());
 
         Collections.shuffle(rhymingWords);
+        rhymingWords.remove(poemTopicWord);
 
         // count up to a configurable poem line count
         int lineCount = 0;
@@ -84,9 +85,6 @@ public class PoemGenerator {
         StringBuilder poem = new StringBuilder();
         // and now we just start trying to find words in the model
         for (String rhyme : rhymingWords) {
-            if (rhyme.equals(poemTopicWord)) {
-                continue; // the same word doesn't rhyme with itself, that's just silly
-            }
             String poemLine = makePoemLine(rhyme);
             if (poemLine != null) {
                 poem.append(poemLine).append("\n");

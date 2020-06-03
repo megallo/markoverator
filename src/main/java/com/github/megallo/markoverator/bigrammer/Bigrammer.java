@@ -48,8 +48,9 @@ public class Bigrammer {
 
     private Random random = new Random();
 
-    private int maxHalfLength = 8;
-    final static String DELIM = "<DELIM>";
+    private int maxHalfLength;
+    public final static String DELIM = "<DELIM>";
+    public final static int DEFAULT_MAX_HALF_LENGTH = 10;
 
     private Pattern BAD_BEGINNING_PUNCTUATION_REGEX = Pattern.compile("[\\.!\\?,;]+");
     private Pattern GOOD_ENDING_PUNCTUATION_REGEX = Pattern.compile("[\\.!\\?]+");
@@ -61,16 +62,44 @@ public class Bigrammer {
 
     public Bigrammer() { }
 
+    public Bigrammer(BigramModel model) {
+        this.setModel(model);
+        maxHalfLength = DEFAULT_MAX_HALF_LENGTH;
+    }
+
+    @Deprecated
+    // I thought this would be way more useful ¯\_(ツ)_/¯
     public Bigrammer(int maxHalfLength) {
         this.maxHalfLength = maxHalfLength;
     }
 
-    /**
-     * TODO do I need this if I just set the line length in the method signature
-     * @param maxHalfLength
-     */
+    public int getMaxHalfLength() {
+        return maxHalfLength;
+    }
+
     public void setMaxHalfLength(int maxHalfLength) {
         this.maxHalfLength = maxHalfLength;
+    }
+
+    public BigramModel getModel() {
+        return model;
+    }
+
+    /**
+     * Call me first!
+     *
+     * Use this to set the model used by Bigrammer. Call this before attempting to generate.
+     *
+     * This replaces Bigrammer.loadModel(), which is deprecated and scheduled for removal.
+     *
+     * @param model A fully deserialized model
+     */
+    public void setModel(BigramModel model) {
+        this.model = model;
+        calculateWordIndices();
+
+        loggie.info("Loaded model; found {} words", model.getFullWordList().size());
+        this.model = model;
     }
 
     /**
@@ -331,10 +360,12 @@ public class Bigrammer {
     }
 
     /**
+     * This method will be removed in a future release. Use BigramModelBuilder.buildModel() instead.
      * Call me first!
      * Initialize this object with a model based on the provided sentences.
      * @param sentencesList a list of sentences: each sentence is pre-tokenized, usually into words
      */
+    @Deprecated
     public void buildModel(List<List<String>> sentencesList) {
         HashMap<Pair, List<String>> forwardCache = new HashMap<>();
         HashMap<Pair, List<String>> backwardCache = new HashMap<>();
@@ -358,12 +389,12 @@ public class Bigrammer {
 
             Pair forwardPair = new Pair(w1, w2);
             Pair backwardPair = new Pair(w2, w3);
-            
+
             if (!forwardCache.containsKey(forwardPair)) {
                 forwardCache.put(forwardPair, new ArrayList<String>());
             }
             forwardCache.get(forwardPair).add(w3);
-            
+
             if (!backwardCache.containsKey(backwardPair)) {
                 backwardCache.put(backwardPair, new ArrayList<String>());
             }
@@ -459,6 +490,7 @@ public class Bigrammer {
                 endWord.equals("we")  ||
                 endWord.equals("they") ||
                 endWord.equals("i've") ||
+                endWord.equals("it's") ||
                 endWord.equals("just") ||   // I don't want to filter out all RB (adverbs), so this is stupid and I want to come up with a smarter thing
                 endWord.endsWith(","))      // in reality this is its own word, but let's not assume that here
                 {
@@ -469,6 +501,13 @@ public class Bigrammer {
         return true;
     }
 
+    /**
+     * This method will be removed in a future release. Use BigramModelBuilder.saveModel() instead.
+     *
+     * Save the model to a file.
+     * @param outputStream
+     */
+    @Deprecated
     public void saveModel(OutputStream outputStream) {
         if (model == null) {
             throw new RuntimeException("Refusing to write empty model.");
@@ -481,6 +520,12 @@ public class Bigrammer {
         loggie.info("Wrote model");
     }
 
+    /**
+     * This method will be removed in a future release. Use BigramModelBuilder.loadModel() + setModel() instead.
+     *
+     * Load the model from a file.
+     */
+    @Deprecated
     public void loadModel(InputStream inputStream) {
         Kryo kryo = new Kryo();
         Input input = new Input(inputStream);

@@ -68,6 +68,15 @@ public class PoemGenerator {
 
         loggie.info("Looking up words that rhyme with {}", poemTopicWord);
         List<String> rhymingWords = poet.findRhymingWords(poemTopicWord); // returns a list including the target word, if we know how to rhyme it
+        rhymingWords = poet.findRhymingWords("persnickety");
+        loggie.info("Rhymes with persnickety: {}", textUtils.stringify(rhymingWords));
+        rhymingWords = poet.findRhymingWords("acts");
+        loggie.info("Rhymes with acts: {}", textUtils.stringify(rhymingWords));
+        rhymingWords = poet.findRhymingWords("agreeable");
+        loggie.info("Rhymes with agreeable: {}", textUtils.stringify(rhymingWords));
+        rhymingWords = poet.findRhymingWords("prestigious");
+        loggie.info("Rhymes with prestigious: {}", textUtils.stringify(rhymingWords));
+        rhymingWords = poet.findRhymingWords(poemTopicWord);
 
         if (rhymingWords == null) {
             loggie.info("I don't know what rhymes with {} :(", poemTopicWord);

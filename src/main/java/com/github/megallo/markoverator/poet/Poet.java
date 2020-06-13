@@ -124,6 +124,9 @@ public class Poet {
                 if (endingPhonemesWords.containsKey(rhyme)) { // TODO I'm pretty sure we can't have something in wordToRhymes unless it's also in endingPhonemesWords, you can remove this check
                     // we have things that rhyme!
                     List<String> wordsThatRhymeWithTargetWord = endingPhonemesWords.get(rhyme);
+                    // if we don't shuffle here then the caller will end up choosing the same words out of their model every time
+                    // and I don't like any of my options for how to inform them where the "good rhymes" and the "bad rhymes" are so they could shuffle it themselves
+                    Collections.shuffle(wordsThatRhymeWithTargetWord); // TODO I don't like returning non-deterministic results, but this will be mitigated when we add structure to Poet in the future
                     loggie.info("Found {} words that rhyme with {}", wordsThatRhymeWithTargetWord.size(), rhyme);
                     allRhymingWords.addAll(wordsThatRhymeWithTargetWord);
                 }

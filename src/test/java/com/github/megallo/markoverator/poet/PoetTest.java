@@ -30,9 +30,13 @@ public class PoetTest {
     // TODO test the model, since you loaded a sample you know exactly what's in your maps at this point
     @Test
     public void testFindRhymes() {
-        List<String> rhymesWithActs = poet.findRhymingWords("acts");
-        List<String> expected = Lists.newArrayList("acts", "facts");
-        Assert.assertEquals(expected, rhymesWithActs);
+        List<String> actual = poet.findRhymingWords("curb");
+        List<String> expected = Lists.newArrayList("blurb", "curb"); // does not rhyme with blur
+        Assert.assertEquals(expected, actual);
+
+        actual = poet.findRhymingWords("acts");
+        expected = Lists.newArrayList("acts", "facts");
+        Assert.assertEquals(expected, actual);
     }
 
     @Test
@@ -44,7 +48,19 @@ public class PoetTest {
         List<String> expected = Lists.newArrayList("AETOWNAYNTEYLZ", "TOWNAYNTEYLZ", "OWNAYNTEYLZ", "NAYNTEYLZ", "AYNTEYLZ", "NTEYLZ", "TEYLZ", "EYLZ");
         Assert.assertEquals(expected, poet.getRhymingSection(input));
 
-        // TODO figure out if 2 and 3 syllable behavior is the same, write a test here for 3
+        /* Three syllables, starts with a consonant and ends with a consonant*/
+        // QUARANTINE
+        // K W AO1 R AH0 N T IY2 N
+        input = Lists.newArrayList("K", "W", "AO", "R", "AH", "N", "T", "IY", "N");
+        expected = Lists.newArrayList("AORAHNTIYN", "RAHNTIYN", "AHNTIYN", "NTIYN", "TIYN", "IYN");
+        Assert.assertEquals(expected, poet.getRhymingSection(input));
+
+        /* Three syllables, starts with a vowel and ends with a consonant*/
+        // OBSOLETE
+        // AA1 B S AH0 L IY2 T
+        input = Lists.newArrayList("AA", "B", "S", "AH", "L", "IY", "T");
+        expected = Lists.newArrayList("AABSAHLIYT", "BSAHLIYT", "SAHLIYT", "AHLIYT", "LIYT", "IYT");
+        Assert.assertEquals(expected, poet.getRhymingSection(input));
 
         /* Two syllables, starts with a vowel */
         // EXCHANGE

@@ -91,10 +91,10 @@ public class Poet {
     public void initializeDictionaries(InputStream cmuDictStream, InputStream cmuPhonesStream, InputStream cmuSymbolsStream, InputStream extraDictStream) {
         try {
             populatePhonemes(cmuPhonesStream); // do this first to get the vowels
-            populateCmuMap(cmuDictStream);
-            if (extraDictStream != null) {
+            if (extraDictStream != null) { // load any custom entries first so they take priority
                 populateCmuMap(extraDictStream);
             }
+            populateCmuMap(cmuDictStream);
         } catch (IOException e) {
             loggie.error("Unable to load CMU files", e);
         }

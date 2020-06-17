@@ -48,9 +48,10 @@ public class Bigrammer {
 
     private Random random = new Random();
 
-    private int maxHalfLength;
-    public final static String DELIM = "<DELIM>";
     public final static int DEFAULT_MAX_HALF_LENGTH = 10;
+    public final static String DELIM = "<DELIM>";
+
+    private int maxHalfLength = DEFAULT_MAX_HALF_LENGTH;
 
     private Pattern BAD_BEGINNING_PUNCTUATION_REGEX = Pattern.compile("[\\.!\\?,;]+");
     private Pattern GOOD_ENDING_PUNCTUATION_REGEX = Pattern.compile("[\\.!\\?]+");
@@ -64,7 +65,6 @@ public class Bigrammer {
 
     public Bigrammer(BigramModel model) {
         this.setModel(model);
-        maxHalfLength = DEFAULT_MAX_HALF_LENGTH;
     }
 
     @Deprecated
@@ -99,7 +99,6 @@ public class Bigrammer {
         calculateWordIndices();
 
         loggie.info("Loaded model; found {} words", model.getFullWordList().size());
-        this.model = model;
     }
 
     /**

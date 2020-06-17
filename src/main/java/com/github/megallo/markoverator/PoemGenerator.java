@@ -16,8 +16,6 @@
 
 package com.github.megallo.markoverator;
 
-import com.github.megallo.markoverator.bigrammer.BigramModel;
-import com.github.megallo.markoverator.bigrammer.BigramModelBuilder;
 import com.github.megallo.markoverator.bigrammer.Bigrammer;
 import com.github.megallo.markoverator.poet.Poet;
 import com.github.megallo.markoverator.utils.TextUtils;
@@ -26,8 +24,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -38,29 +36,40 @@ public class PoemGenerator {
 
     private static final Logger loggie = LoggerFactory.getLogger(PoemGenerator.class);
 
-    TextUtils textUtils = new TextUtils();
+    static TextUtils textUtils = new TextUtils(); // TODO
+    Bigrammer bigrammer;
+    Poet poet;
+
+    PoemGenerator(String modelFile) throws FileNotFoundException {
+        this.bigrammer = new Bigrammer();
+        // load an existing model from a file
+        // example model creation is shown in MarkovGenerator
+        this.bigrammer.loadModel(new FileInputStream(new File(modelFile)));
+        this.bigrammer.setMaxHalfLength(6); // short and sweet
+        poet = new Poet();
+    }
 
     // TODO I think I want a helper class that accepts a model, poem length, and line max length
     // to do all this for you
     public static void main(String[] args) throws IOException {
-        if (args.length != 2) {
-            loggie.error("Nope!\n\nUsage: PoemGenerator <full path to model file> <word to make a poem from>\n\n");
+        if (args.length < 1) {
+            loggie.error("Nope!\n\nUsage: PoemGenerator <full path to model file>\n\n");
             return;
         }
-        PoemGenerator pg = new PoemGenerator();
-        pg.doStuff(args[1], args[0]);
+
+        PoemGenerator pg = new PoemGenerator(args[0]);
+
+        pg.buildThreeLinePoem("alice");
+        pg.buildThreeLinePoem("anxiously");
+        pg.buildThreeLinePoem("queen");
+        pg.buildThreeLinePoem("interest");
+        pg.buildThreeLinePoem("interest");
+        pg.buildThreeLinePoem("mushroom");
+        pg.buildThreeLinePoem("conversation");
+
     }
 
-    public void doStuff(String targetWord, String modelLocation) throws IOException {
-        loggie.info("Loading rhyme dictionary");
-        Poet poet = new Poet();
-
-        loggie.info("Loading markov model");
-        // example model creation is shown in MarkovGenerator.buildAndSaveModel()
-        BigramModel model = BigramModelBuilder.loadModel(new FileInputStream(new File(modelLocation)));
-        Bigrammer bigrammer = new Bigrammer(model);
-        bigrammer.setMaxHalfLength(6); // make poems short and sweet
-
+    public void buildThreeLinePoem(String targetWord) {
         // first, make sure our target word is in the model. Otherwise, how do we even know what we're talking about?
         String poemTopicWord = targetWord.toLowerCase();
         String topicPoemLine; // bonus: keep the line and use it in the poem

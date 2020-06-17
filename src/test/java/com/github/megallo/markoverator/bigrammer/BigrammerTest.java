@@ -32,13 +32,13 @@ public class BigrammerTest {
 
     @BeforeClass
     public static void setup() {
-        bigrammer = new Bigrammer();
-        bigrammer.buildModel(Arrays.asList(
+        BigramModel model = BigramModelBuilder.buildModel(Arrays.asList(
                 Arrays.asList("howdy", "y'all", ".", "How", "are", "ya", "?"),
                 Arrays.asList(",", "howdy", "pardner"),
                 Arrays.asList("keep", "yer", "!", "boots", "on"),
                 Arrays.asList(".", "I", "reckon")
         ));
+        bigrammer = new Bigrammer(model);
     }
 
     @Test

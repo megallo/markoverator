@@ -16,6 +16,8 @@
 
 package com.github.megallo.markoverator;
 
+import com.github.megallo.markoverator.bigrammer.BigramModel;
+import com.github.megallo.markoverator.bigrammer.BigramModelBuilder;
 import com.github.megallo.markoverator.bigrammer.Bigrammer;
 import com.github.megallo.markoverator.utils.TextUtils;
 import org.slf4j.Logger;
@@ -29,8 +31,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.LinkedList;
 import java.util.List;
 
 
@@ -57,12 +57,18 @@ public class MarkovGenerator {
         }
 
         MarkovGenerator mg = new MarkovGenerator();
-        Bigrammer bigrams = new Bigrammer(12); // this number is maximum half-sentence length, does not affect model creation
 
         loggie.info("Doing things, hang on");
-        bigrams.buildModel(mg.readAndCleanFile(args[0]));
-        bigrams.saveModel(new FileOutputStream(new File(args[1])));
-//        bigrams.loadModel(new FileInputStream(new File(args[1])));
+
+        /*
+        Choose your own adventure! You can either make a new model and save it for future use,
+        or you can load up a model that you created previously. Use the method that's right for you!
+         */
+
+        BigramModel model = mg.buildAndSaveModel(args[0], args[1]);
+//        BigramModel model = mg.loadModelFromFile(args[1]);
+
+        Bigrammer bigrams = new Bigrammer(model);
 
         // generate totally random sentences
         for (int i = 0; i < 10; i++) {
@@ -93,14 +99,57 @@ public class MarkovGenerator {
         textUtils = new TextUtils();
     }
 
+    /**
+     * Example usage of how to use BigramModelBuilder to generate a new model from input sentence file.
+     * The saved model can be loaded and used later instead of rebuilding.
+     * @param inputFilePath fully qualified path to a file containing sentences to build a model from, one per line
+     * @param modelFilePath path or name of a file to serialize the model to
+     * @return the newly created model object
+     */
+    public BigramModel buildAndSaveModel(String inputFilePath, String modelFilePath) {
+
+        // load up and clean the strings that we want to build a new model from
+        List<List<String>> inputSentences = this.readAndCleanFile(inputFilePath);
+
+        // build the model
+        BigramModel model = BigramModelBuilder.buildModel(inputSentences);
+
+        // save the model to a file (not required in order to use it to generate random with the Bigrammer)
+        try {
+            BigramModelBuilder.saveModel(model, new FileOutputStream(new File(modelFilePath)));
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException("Couldn't write model to file " + modelFilePath, e);
+        }
+
+        return model;
+    }
+
+    /**
+     * If you have previously built a model and now want to use it to generate text with the Bigrammer,
+     * here is an example of how to load it up for use (as opposed to rebuilding it from the corpus).
+     *
+     * @param modelFilePath Fully qualified path to previously created model file
+     * @return model ready for use in Bigrammer
+     */
+    public BigramModel loadModelFromFile(String modelFilePath) {
+        BigramModel model;
+        try {
+            model = BigramModelBuilder.loadModel(new FileInputStream(new File(modelFilePath)));
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException("Couldn't find model file at " + modelFilePath, e);
+        }
+
+        return model;
+    }
+
     public String postProcess(List<String> tokens) {
         return textUtils.stringify(textUtils.capitalizeInitialWord(textUtils.reattachPunctuation(tokens)));
     }
 
-    private List<List<String>> readAndCleanFile(String filename) throws IOException {
+    private List<List<String>> readAndCleanFile(String filename) {
         List<List<String>> cleanedTokenizedLines = new ArrayList<>();
 
-        BufferedReader br = null;
+        BufferedReader br;
         try {
             File file = new File(filename);
             br = new BufferedReader(new InputStreamReader(new FileInputStream(file)));
@@ -110,11 +159,9 @@ public class MarkovGenerator {
                 cleanedTokenizedLines.add(textUtils.cleanUpLine(line));
             }
         } catch (FileNotFoundException e) {
-            loggie.error("Unable to find file " + filename, e);
-        } finally {
-            if (br != null) {
-                br.close();
-            }
+            throw new RuntimeException("Unable to find file " + filename, e);
+        } catch (IOException e) {
+            throw new RuntimeException("We found the file but couldn't read it: " + filename, e);
         }
 
         return cleanedTokenizedLines;

@@ -16,6 +16,8 @@
 
 package com.github.megallo.markoverator;
 
+import com.github.megallo.markoverator.bigrammer.BigramModel;
+import com.github.megallo.markoverator.bigrammer.BigramModelBuilder;
 import com.github.megallo.markoverator.bigrammer.Bigrammer;
 import com.github.megallo.markoverator.poet.Poet;
 import com.github.megallo.markoverator.utils.TextUtils;
@@ -36,8 +38,7 @@ public class PoemGenerator {
 
     private static final Logger loggie = LoggerFactory.getLogger(PoemGenerator.class);
 
-    static TextUtils textUtils = new TextUtils(); // TODO
-    Bigrammer bigrams = new Bigrammer(7);
+    TextUtils textUtils = new TextUtils();
 
     // TODO I think I want a helper class that accepts a model, poem length, and line max length
     // to do all this for you
@@ -55,13 +56,15 @@ public class PoemGenerator {
         Poet poet = new Poet();
 
         loggie.info("Loading markov model");
-        // example model creation is shown in MarkovGenerator
-        bigrams.loadModel(new FileInputStream(new File(modelLocation)));
+        // example model creation is shown in MarkovGenerator.buildAndSaveModel()
+        BigramModel model = BigramModelBuilder.loadModel(new FileInputStream(new File(modelLocation)));
+        Bigrammer bigrammer = new Bigrammer(model);
+        bigrammer.setMaxHalfLength(6); // make poems short and sweet
 
         // first, make sure our target word is in the model. Otherwise, how do we even know what we're talking about?
         String poemTopicWord = targetWord.toLowerCase();
         String topicPoemLine; // bonus: keep the line and use it in the poem
-        if ((topicPoemLine = makePoemLine(poemTopicWord)) == null) {
+        if ((topicPoemLine = makePoemLine(bigrammer, poemTopicWord)) == null) {
             loggie.info("I don't know about {} :/", poemTopicWord);
             return;
         }
@@ -87,7 +90,7 @@ public class PoemGenerator {
             if (rhyme.equals(poemTopicWord)) {
                 continue; // the same word doesn't rhyme with itself, that's just silly
             }
-            String poemLine = makePoemLine(rhyme);
+            String poemLine = makePoemLine(bigrammer, rhyme);
             if (poemLine != null) {
                 poem.append(poemLine).append("\n");
                 if (++lineCount >= 2) { // TODO configurable, this is the number of lines in the poem plus the last line
@@ -101,9 +104,9 @@ public class PoemGenerator {
         loggie.info("I wrote this for you!\n{}", poem);
     }
 
-    private String makePoemLine(String word) {
+    private String makePoemLine(Bigrammer bigrammer, String word) {
         List<String> tokens;
-        if ((tokens = bigrams.generateRandomBackwards(word)) != null) {
+        if ((tokens = bigrammer.generateRandomBackwards(word)) != null) {
             // we found a word that is in the model
             return textUtils.stringify(textUtils.capitalizeInitialWord(textUtils.reattachPunctuation(tokens)));
         }

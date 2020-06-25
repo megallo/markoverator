@@ -29,6 +29,7 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -61,7 +62,7 @@ public class Poet {
 
     // the rhyming sections mapped to lists of words that end with that rhyming section
     // EYNJH -> [strange, mange, arrange, prearrange, ... ]
-    Map<String, List<String>> endingPhonemesWords = new HashMap<>(); // TODO rename to rhymeToWords
+    Map<String, List<String>> rhymeToWords = new HashMap<>();
 
     /**
      * Default constructor if you just want the CMU dictionaries
@@ -121,9 +122,9 @@ public class Poet {
             // notably here, the list is ordered from largest to smallest
             // that means the order in which we look up and append the words will be most-rhyming to least-rhyming
             for (String rhyme : rhymingSections) {
-                if (endingPhonemesWords.containsKey(rhyme)) { // TODO I'm pretty sure we can't have something in wordToRhymes unless it's also in endingPhonemesWords, you can remove this check
+                if (rhymeToWords.containsKey(rhyme)) { // TODO I'm pretty sure we can't have something in wordToRhymes unless it's also in endingPhonemesWords, you can remove this check
                     // we have things that rhyme!
-                    List<String> wordsThatRhymeWithTargetWord = endingPhonemesWords.get(rhyme);
+                    List<String> wordsThatRhymeWithTargetWord = rhymeToWords.get(rhyme);
                     // if we don't shuffle here then the caller will end up choosing the same words out of their model every time
                     // and I don't like any of my options for how to inform them where the "good rhymes" and the "bad rhymes" are so they could shuffle it themselves
                     Collections.shuffle(wordsThatRhymeWithTargetWord); // TODO I don't like returning non-deterministic results, but this will be mitigated when we add structure to Poet in the future
@@ -263,9 +264,14 @@ public class Poet {
                     // ACTS(1)  AE1 K S
                     // but we want to put all rhymes for the homographs into the same list
                     // then we sort by length so in theory we still mostly get the maximum rhyme first
+                    // also remove duplicates
+                    // This might be heavy but we save computation at runtime by doing it now
+                    // also it's only 8,780 times plus the custom dict entries
                     if (wordToRhymes.containsKey(actualWord)) {
-                        wordToRhymes.get(actualWord).addAll(rhymingSections);
-//                        wordToRhymes.get(word).sort(); // TODO make a comparator that sorts from longest to shortest
+                        List<String> rhymesForActualWord = wordToRhymes.get(actualWord);
+                        rhymesForActualWord.addAll(rhymingSections);
+                        rhymesForActualWord.sort(Comparator.comparingInt(String::length).reversed());
+                        wordToRhymes.put(actualWord, Lists.newArrayList(new LinkedHashSet<>(rhymesForActualWord)));
                     } else {
                         wordToRhymes.put(actualWord, Lists.newArrayList(rhymingSections));
                     }
@@ -279,11 +285,11 @@ public class Poet {
                     List<String> wordsForThisRhyme;
                     for (String rhyme : rhymingSections) {
 
-                        if (endingPhonemesWords.containsKey(rhyme)) {
-                            wordsForThisRhyme = endingPhonemesWords.get(rhyme);
+                        if (rhymeToWords.containsKey(rhyme)) {
+                            wordsForThisRhyme = rhymeToWords.get(rhyme);
                         } else {
                             wordsForThisRhyme = new ArrayList<>();
-                            endingPhonemesWords.put(rhyme, wordsForThisRhyme);
+                            rhymeToWords.put(rhyme, wordsForThisRhyme);
                         }
                         wordsForThisRhyme.add(actualWord);
 
@@ -299,10 +305,10 @@ public class Poet {
      */
     private void logStats() {
 
-        loggie.info("Count of distinct rhymes: {}", endingPhonemesWords.keySet().size());
+        loggie.info("Count of distinct rhymes: {}", rhymeToWords.keySet().size());
 
         HashMap<Integer, Integer> lengthCountMap = new HashMap<>();
-        Collection<List<String>> listsOfRhymingWords = endingPhonemesWords.values();
+        Collection<List<String>> listsOfRhymingWords = rhymeToWords.values();
         for (List<String> thisList : listsOfRhymingWords) {
             // collect length
             int numberOfWordsThatRhymeWithEachOther = thisList.size();

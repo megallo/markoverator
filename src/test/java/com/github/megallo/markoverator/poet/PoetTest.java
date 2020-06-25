@@ -27,15 +27,16 @@ public class PoetTest {
         super();
     }
 
-    // TODO test the model, since you loaded a sample you know exactly what's in your maps at this point
     @Test
     public void testFindRhymes() {
         List<String> actual = poet.findRhymingWords("curb");
         List<String> expected = Lists.newArrayList("blurb", "curb"); // does not rhyme with blur
+        actual.sort(String::compareTo); // we shuffled, so un-shuffle
         Assert.assertEquals(expected, actual);
 
         actual = poet.findRhymingWords("acts");
         expected = Lists.newArrayList("acts", "facts");
+        actual.sort(String::compareTo); // we shuffled, so un-shuffle
         Assert.assertEquals(expected, actual);
     }
 
@@ -112,6 +113,38 @@ public class PoetTest {
         expected = Lists.newArrayList("EYZ");
         Assert.assertEquals(expected, poet.getRhymingSection(input));
 
+    }
+
+    @Test
+    public void testRhymeLengthOrder() {
+        List<String> rhymesOfTomato = poet.wordToRhymes.get("tomato");
+        List<String> expected = Lists.newArrayList("AHMEYTOW", "AHMAATOW", "MEYTOW", "MAATOW", "EYTOW", "AATOW", "TOW");
+
+        Assert.assertEquals(expected, rhymesOfTomato);
+
+        // after sorting it should be ordered based off of the pronunciation we read in first
+        // this allows us to be confident in the user's custom pronunciation being available before CMU
+        List<String> actual = poet.findRhymingWords("tomato");
+        expected = Lists.newArrayList("tomato", "potato", "grotto");
+        Assert.assertEquals(expected, actual);
+    }
+
+    @Test
+    public void testRhymeLengthOrder1000Times() {
+
+        // the sort order of longest - shortest keeps the initial order within a given length
+        // this allows us to be confident in the user's custom pronunciation being available before CMU
+        for (int i = 0; i < 1000; i++) {
+            Poet localPoet = new Poet(
+                    PoetTest.class.getResourceAsStream(mockDict),
+                    PoetTest.class.getResourceAsStream(realPhones),
+                    PoetTest.class.getResourceAsStream(realSymbols),
+                    null);
+            List<String> rhymesOfTomato = localPoet.wordToRhymes.get("tomato");
+            List<String> expected = Lists.newArrayList("AHMEYTOW", "AHMAATOW", "MEYTOW", "MAATOW", "EYTOW", "AATOW", "TOW");
+
+            Assert.assertEquals(expected, rhymesOfTomato);
+        }
     }
 
     @Test

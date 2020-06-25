@@ -115,9 +115,9 @@ public class TextUtils {
 
     /**
      * Remove anything with angle brackets. For Slack dumps this will remove
-     *    user mentions <@U123456>
-     *    <!here> <!channel>
-     *    URLs
+     * {@code    user mentions <@U123456>}
+     * {@code    <!here> <!channel>}
+     * {@code    URLs}
      */
     public List<String> removeSlackMentions(List<String> sentence) {
         ListIterator<String> it = sentence.listIterator();
@@ -479,7 +479,7 @@ public class TextUtils {
     /**
      * When we find punctuation attached to a word, make it its own word. Internal punctuation stays put
      * e.g.
-     * Howdy! -> Howdy !
+     * {@code Howdy! -> Howdy !}
      *
      * Useful when combined with reattachPunctuation() after generation
      */

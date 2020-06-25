@@ -27,13 +27,17 @@ The input corpus file contains one message per line, e.g.
 ```
 
 ## Poet
-Now you can made poems from your model! See example usage in [PoemGenerator](src/main/java/com/github/megallo/markoverator/PoemGenerator.java). This uses the [CMU Pronouncing Dictionary](http://www.speech.cs.cmu.edu/cgi-bin/cmudict).
-
-So far it only rhymes on the last syllable. I hope to dig into the syllable information in the CMU dict next to make more interesting rhymes.
+You can make poems from your model! See example usage in [PoemGenerator](src/main/java/com/github/megallo/markoverator/PoemGenerator.java). This uses the [CMU Pronouncing Dictionary](http://www.speech.cs.cmu.edu/cgi-bin/cmudict).
 
 ## Release Notes
 
-#### New in 2.2.0 :exclamation:
+#### New in 2.3.0 :exclamation:
+- Poet: Major overhaul of rhyming algorithm #4
+- PoemGenerator: Adds multiple sample rhyme words
+- BigramModelBuilder: Pulls model building into a utility class #3
+- Java 8 (arguably should've waited for a major version release but no one is going to miss Java 7)
+
+#### New in 2.2.0
 - Bigrammer updates: 
   - Allow input sentences with fewer than three words
   - New method to specify min/max word count during generation
@@ -65,20 +69,20 @@ So far it only rhymes on the last syllable. I hope to dig into the syllable info
     <dependency>
       <groupId>com.github.megallo</groupId>
       <artifactId>markoverator</artifactId>
-      <version>2.2.0</version>
+      <version>2.3.0</version>
     </dependency>
 ```
 
 ### Gradle
 ```groovy
-    compile "com.github.megallo:markoverator:2.2.0"
+    compile "com.github.megallo:markoverator:2.3.0"
 ```
 
 ### Building from source
 This module uses a [Gradle](https://gradle.org)-based build system. In the instructions
 below, [`./gradlew`](https://vimeo.com/34436402) is invoked from the root of the source tree and serves as
 a cross-platform, self-contained bootstrap mechanism for the build. The only
-prerequisites are [Git](https://help.github.com/articles/set-up-git) and JDK 1.7+.
+prerequisites are [Git](https://help.github.com/articles/set-up-git) and JDK 1.8+.
 
 #### check out sources
 `git clone git://github.com/megallo/markoverator.git`

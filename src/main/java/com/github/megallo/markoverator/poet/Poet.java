@@ -27,8 +27,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -48,12 +52,17 @@ public class Poet {
 
     private final static String cmuDictComment = ";;;";
 
-    Map<String, List<String>> wordPhonemes = new HashMap<>();
+    // TODO srsly this doesn't change once you build the model, so use Kryo and dump it somewhere. add a method to load the model for initializeDictionary
+
     Set<String> vowels = new HashSet<>();
 
-    // TODO make a bunch of maps populated with n last phonemes depending on word length?
-    // TODO make that configurable in case memory is an issue?
-    Map<String, List<String>> endingPhonemesWords = new HashMap<>();
+    // the raw words mapped to their rhyming sections
+    // lestrange -> [EHSTREYNJH, STREYNJH, TREYNJH, REYNJH, EYNJH]
+    Map<String, List<String>> wordToRhymes = new HashMap<>();
+
+    // the rhyming sections mapped to lists of words that end with that rhyming section
+    // EYNJH -> [strange, mange, arrange, prearrange, ... ]
+    Map<String, List<String>> rhymeToWords = new HashMap<>();
 
     /**
      * Default constructor if you just want the CMU dictionaries
@@ -82,147 +91,276 @@ public class Poet {
 
     public void initializeDictionaries(InputStream cmuDictStream, InputStream cmuPhonesStream, InputStream cmuSymbolsStream, InputStream extraDictStream) {
         try {
-            populatePhonemes(cmuPhonesStream, cmuSymbolsStream); // do this first to get the vowels
-            populateCmuMap(cmuDictStream);
-            if (extraDictStream != null) {
+            populatePhonemes(cmuPhonesStream); // do this first to get the vowels
+            if (extraDictStream != null) { // load any custom entries first so they take priority
                 populateCmuMap(extraDictStream);
             }
+            populateCmuMap(cmuDictStream);
         } catch (IOException e) {
             loggie.error("Unable to load CMU files", e);
         }
-        loggie.info("Loaded rhyme dictionary; found {} words", wordPhonemes.size());
-    }
+        loggie.info("Loaded rhyme dictionary; found {} words", wordToRhymes.size());
 
-    public List<String> findRhymingWords(String targetWord) {
-        if (wordPhonemes.containsKey(targetWord.toLowerCase())) {
-            List<String> targetPhonemes = wordPhonemes.get(targetWord.toLowerCase());
-
-            // be sure to use the same phoneme ending algorithm for both insertion and lookup
-            String targetPhonemeMash = getRhymingSection(targetPhonemes);
-            if (endingPhonemesWords.containsKey(targetPhonemeMash)) {
-                // we have things that rhyme!
-                loggie.info("Found {} words that rhyme with {}", endingPhonemesWords.get(targetPhonemeMash).size(), targetWord);
-                return endingPhonemesWords.get(targetPhonemeMash);
-            }
+        if (loggie.isDebugEnabled()) {
+            logStats();
         }
-
-        return null; // we don't have things that rhyme :(
     }
 
     /**
-     * Extract the section to rhyme with. This is probably the last few letters
-     * up to and including the last vowel
+     * Look up all known English words that rhyme with the target word
+     * Not limited by any Bigrammer user-defined model, this is all from CMU dict and extras-dict
+     *
+     * @param targetWord we want things that rhyme with this
+     * @return list of unique words that rhyme with targetWord, including targetWord itself
+     */
+    public List<String> findRhymingWords(String targetWord) {
+        if (wordToRhymes.containsKey(targetWord.toLowerCase())) { // is this word in the dictionary?
+            Set<String> allRhymingWords = new LinkedHashSet<>();
+
+            List<String> rhymingSections = wordToRhymes.get(targetWord.toLowerCase()); // wordPhonemes contained numbers but now does not
+            // wordToRhymes.get("KERFUFFLE") -> ["ERFAHFAHL", "FAHFAHL", "AHFAHL", "FAHL", "AHL"]
+            // notably here, the list is ordered from largest to smallest
+            // that means the order in which we look up and append the words will be most-rhyming to least-rhyming
+            for (String rhyme : rhymingSections) {
+                if (rhymeToWords.containsKey(rhyme)) { // TODO I'm pretty sure we can't have something in wordToRhymes unless it's also in endingPhonemesWords, you can remove this check
+                    // we have things that rhyme!
+                    List<String> wordsThatRhymeWithTargetWord = rhymeToWords.get(rhyme);
+                    // if we don't shuffle here then the caller will end up choosing the same words out of their model every time
+                    // and I don't like any of my options for how to inform them where the "good rhymes" and the "bad rhymes" are so they could shuffle it themselves
+                    Collections.shuffle(wordsThatRhymeWithTargetWord); // TODO I don't like returning non-deterministic results, but this will be mitigated when we add structure to Poet in the future
+                    loggie.info("Found {} words that rhyme with {}", wordsThatRhymeWithTargetWord.size(), rhyme);
+                    allRhymingWords.addAll(wordsThatRhymeWithTargetWord);
+                }
+            }
+
+            // this contains the targetWord itself for as many rhyming sections as it had, and it's up to the caller to remove it if they want to???
+            return Lists.newArrayList(allRhymingWords);
+        }
+
+        return null; // we don't have that word in the dictionary :c
+    }
+
+    /**
+     * Extract all possible sections that this word could rhyme with.
+     * Return them in a list ordered from longest to shortest
+     *
      * @param phonemeList for this word
      */
     @VisibleForTesting
-    String getRhymingSection(List<String> phonemeList) {
+    List<String> getRhymingSection(List<String> phonemeList) {
         StringBuilder rhymeMe = new StringBuilder();
         Stack<String> rhymeMeStack = new Stack<>();
-        // walk the list backwards until we find the last vowel
-        int i;
-        for (i = phonemeList.size() - 1; i >= 0; i--) {
-            String pho = phonemeList.get(i);
-            rhymeMeStack.push(pho);
+
+        // find the locations of the first and last vowels
+        int firstVowel = -1;
+        int lastVowel = -2;
+
+        for (int j = 0; j < phonemeList.size(); j++) {
+            String pho = phonemeList.get(j);
             if (vowels.contains(pho)) {
-                // we did it
-                break;
+                lastVowel = j;
+                if (firstVowel == -1) {
+                    firstVowel = j;
+                }
             }
         }
 
-        // TODO I googled and this is a "single" rhyme. Make more extractions to try for double and dactylic rhymes
+        // TODO I am deciding not to add only the last vowel in a multi-syllable word. The goal is
+        // to prevent terrible rhymes like meander + sister
 
-        if (rhymeMeStack.size() == 1) { // this means we only pulled off the last phoneme and it was a vowel
-            // so just grab one more if available
-            i = phonemeList.size() - 2;
-            if (i >= 0) {
-                rhymeMeStack.push(phonemeList.get(i));
+        // TODO should we keep the whole word in a single-syllable word?
+        // Do these rhyme: bye + goodbye
+
+        // TODO what do about prefixes on the base word?
+        // Do these rhyme: agreeable + disagreeable
+        // but how do we not become overzealous in throwing things out?
+        // Do these rhyme: acts + artifacts + contracts
+
+        // TODO you removed the emphasis markers for more rhymes. Good choice or no?
+        // Do these rhyme: agreeable + permeable
+
+        int i;
+
+        // if we have one phoneme, then it's a vowel, add it and don't iterate
+        if (phonemeList.size() == 1) {
+            // A  AH0
+            rhymeMeStack.push(phonemeList.get(0));
+        }
+        else {
+            // if we have only one vowel, add one rhyme which is vowel + everything after it
+            if (firstVowel == lastVowel) {
+                // BYE  B AY1 -> AY
+                // ACT  AE1 K T -> AEKT
+                // PLAYS  P L EY1 Z -> EYZ
+                for (i = lastVowel; i < phonemeList.size(); i++) {
+                    String pho = phonemeList.get(i);
+                    rhymeMe.append(pho);
+                }
+                rhymeMeStack.push(rhymeMe.toString());
+            } else {
+                int startHere;
+                // we have more than one vowel, therefore more than one syllable
+                if (lastVowel == phonemeList.size()-1) {
+                    // if it ends with a vowel, add rhyme of previous non-vowel + vowel
+                    // that means start right before the last vowel
+                    // PONY  P OW1 N IY2 -> NIY
+                    // ALTER  AO1 L T ER0 -> TER
+                    startHere = lastVowel - 1;
+                } else {
+                    // if it doesn't end with a vowel, start at the last vowel instead and take it and the stuff after it to the end of the word
+                    // PLAYS  P L EY1 Z
+                    startHere = lastVowel;
+                }
+
+                for (i = startHere; i < phonemeList.size(); i++) {
+                    String pho = phonemeList.get(i);
+                    rhymeMe.append(pho);
+                }
+                // push that last syllable into the final list
+                rhymeMeStack.push(rhymeMe.toString());
+
+                // now take that last syllable and keep prepending the phones to it until you reach the first vowel
+                // PONY  P OW1 N IY2 -> OWNIY
+                // ALTER  AO1 L T ER0 -> LTER, AOLTER
+                for (i = startHere - 1; i >= firstVowel; i--) {
+                    String pho = phonemeList.get(i);
+                    rhymeMe.insert(0, pho);
+                    rhymeMeStack.push(rhymeMe.toString());
+                }
+
             }
         }
 
-        // stacks still append to the back, so it's just less annoying reverse traversal
-        while (!rhymeMeStack.empty()) {
-            // pop so they're in the right order
-            rhymeMe.append(rhymeMeStack.pop());
-        }
-        return rhymeMe.toString();
+        Collections.reverse(rhymeMeStack);
+        return rhymeMeStack;
     }
 
     private void populateCmuMap(InputStream cmuDict) throws IOException {
         try(BufferedReader reader = new BufferedReader(new InputStreamReader(cmuDict))) {
             String line;
+            // a line looks like this:
+            // COAXIAL  K OW1 AE1 K S IY0 AH0 L
             while((line = reader.readLine()) != null) {
-                if (!line.startsWith(cmuDictComment)) {
-                    String[] split = line.split("\\s+");// break on whitespace
-                    String word = split[0].toLowerCase();
+                if (!line.isEmpty() && !line.startsWith(cmuDictComment)) {
+                    String[] split = line.split("\\s+"); // break on whitespace
+                    String word = split[0].toLowerCase(); // the first item on the line is the word in plaintext
 
-
-                    List<String> phonemes = Lists.newArrayList(split);
-                    phonemes.remove(0); // TODO this is O(n) but it's only as long as the phoneme list, so 16 max?
-
-                    // TODO do something with the words like prestigious(1). I don't care enough to look up multiple
-                    // pronunciations, but I want all of them to be stored in the reverse lookup map. I think that's ok?
-                    wordPhonemes.put(word, phonemes);
-
-                    String lastNPhonemes = getRhymingSection(phonemes);
-
-                    List<String> wordsForThisPhoneme;
-                    if (endingPhonemesWords.containsKey(lastNPhonemes)) {
-                        wordsForThisPhoneme = endingPhonemesWords.get(lastNPhonemes);
-                    } else {
-                        wordsForThisPhoneme = new ArrayList<>();
-                        endingPhonemesWords.put(lastNPhonemes, wordsForThisPhoneme);
+                    List<String> phonemes = Lists.newArrayList();
+                    // start at 1 so we skip the word and only iterate over the phonemes
+                    // remove the numbers from the end of the vowel phonemes
+                    // these indicate emphasis, which we might want someday, but they'd need to go in their own lookup table because they reduce rhymability
+                    // K OW1 AE1 K S IY0 AH0 L ---> K OW AE K S IY AH L
+                    for (int i = 1; i < split.length; i++) {
+                        phonemes.add(split[i].replaceAll("\\d$", ""));
                     }
-                    // TODO remove punctuation from words, e.g. PRESTIGIOUS(1)
-                    // TODO remove punctuation from words, e.g. "quote
-                    wordsForThisPhoneme.add(removeWordCounter(word));
 
+                    List<String> rhymingSections = getRhymingSection(phonemes);
+                    String actualWord = removeWordCounter(word); // prestigious(1) -> prestigious
+
+                    /* map it from word -> rhyme */
+
+                    // we encounter the word multiple times in the case that it has different pronunciations, like
+                    // ACTS  AE1 K T S
+                    // ACTS(1)  AE1 K S
+                    // but we want to put all rhymes for the homographs into the same list
+                    // then we sort by length so in theory we still mostly get the maximum rhyme first
+                    // also remove duplicates
+                    // This might be heavy but we save computation at runtime by doing it now
+                    // also it's only 8,780 times plus the custom dict entries
+                    if (wordToRhymes.containsKey(actualWord)) {
+                        List<String> rhymesForActualWord = wordToRhymes.get(actualWord);
+                        rhymesForActualWord.addAll(rhymingSections);
+                        rhymesForActualWord.sort(Comparator.comparingInt(String::length).reversed());
+                        wordToRhymes.put(actualWord, Lists.newArrayList(new LinkedHashSet<>(rhymesForActualWord)));
+                    } else {
+                        wordToRhymes.put(actualWord, Lists.newArrayList(rhymingSections));
+                    }
+
+                    /* map it from rhyme -> word */
+
+                    // we have this:
+                    // getRhymingSections("KERFUFFLE") -> ["ERFAHFAHL", "FAHFAHL", "AHFAHL", "FAHL", "AHL"]
+                    // so for each of the known rhymes for this word, go find the rhyme in the map and add this word
+                    // to the list of known words for that rhyme
+                    List<String> wordsForThisRhyme;
+                    for (String rhyme : rhymingSections) {
+
+                        if (rhymeToWords.containsKey(rhyme)) {
+                            wordsForThisRhyme = rhymeToWords.get(rhyme);
+                        } else {
+                            wordsForThisRhyme = new ArrayList<>();
+                            rhymeToWords.put(rhyme, wordsForThisRhyme);
+                        }
+                        wordsForThisRhyme.add(actualWord);
+
+                    }
                 }
             }
         }
     }
 
-    private String removeWordCounter(String originalWord) {
-        // TODO this doesn't work
+    /**
+     * Method to log rhyme stats to see if changes to the rhyming algorithm actually did anything.
+     * Heavy, should only be used for analyzing changes
+     */
+    private void logStats() {
+
+        loggie.info("Count of distinct rhymes: {}", rhymeToWords.keySet().size());
+
+        HashMap<Integer, Integer> lengthCountMap = new HashMap<>();
+        Collection<List<String>> listsOfRhymingWords = rhymeToWords.values();
+        for (List<String> thisList : listsOfRhymingWords) {
+            // collect length
+            int numberOfWordsThatRhymeWithEachOther = thisList.size();
+            Integer currentCount = 1;
+            if (lengthCountMap.containsKey(numberOfWordsThatRhymeWithEachOther)) {
+                currentCount = lengthCountMap.get(numberOfWordsThatRhymeWithEachOther);
+                currentCount++;
+            }
+            // add 1 to the existing count, or put 1 if this
+            lengthCountMap.put(numberOfWordsThatRhymeWithEachOther, currentCount);
+
+            if (numberOfWordsThatRhymeWithEachOther > 1000) {
+                loggie.info("Whoa! This word has {} rhymes! {} {} {}", numberOfWordsThatRhymeWithEachOther, thisList.get(0), thisList.get(500), thisList.get(thisList.size()-1));
+            }
+        }
+
+        ArrayList<Integer> printme2 = new ArrayList<>(lengthCountMap.keySet());
+        Collections.sort(printme2);
+
+        for(Integer sortedKey : printme2) {
+            loggie.info("number of words that rhyme with each other = {} and count of those is {}", sortedKey, lengthCountMap.get(sortedKey));
+        }
+    }
+
+    @VisibleForTesting
+    protected String removeWordCounter(String originalWord) {
         String[] split = originalWord.split("\\(\\d\\)");
         return split[0];
     }
 
-    private void populatePhonemes(InputStream phonemesStream, InputStream symbolsStream) throws IOException {
-        List<String> allSymbols = new ArrayList<>();
-
-        // read the symbols and then transfer them into the vowels set based on the phonemes input
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(symbolsStream))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                if (!line.startsWith(cmuDictComment)) {
-                    allSymbols.add(line.trim());
-                }
-            }
-        }
+    private void populatePhonemes(InputStream phonemesStream) throws IOException {
 
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(phonemesStream))) {
             String line;
+            // A line looks like
+            // AE	vowel
+            // TH	fricative
+            // and we only want the vowels
             while ((line = reader.readLine()) != null) {
                 if (!line.startsWith(cmuDictComment)) {
-                    String[] split = line.split("\\s+");// break on whitespace
+                    String[] split = line.split("\\s+"); // break on whitespace
+                    // ["AE", "vowel"]
                     String phonemeBase = split[0];
                     String phonemeType = split[1];
                     if (phonemeType.equals("vowel")) {
-                        for (String symbol : allSymbols) {
-                            // symbols are like AA1 and EH0 but phoneme-to-type mapping is AA EH
-                            // so if the unique symbols start with a base that's marked as a vowel
-                            // add it to the master vowel lookup set
-                            // that way later we don't have to do a .startsWith() comparison on every word's phonemes
-                            if (symbol.startsWith(phonemeBase)) {
-                                vowels.add(symbol);
-                            }
-                        }
+                        vowels.add(phonemeBase);
                     }
                 }
             }
         }
 
-        loggie.debug("vowels: {}", vowels.toString());
+        loggie.info("vowels: {}", vowels.toString());
     }
 
 }

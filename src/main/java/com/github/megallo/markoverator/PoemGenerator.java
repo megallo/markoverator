@@ -18,7 +18,6 @@ package com.github.megallo.markoverator;
 
 import com.github.megallo.markoverator.bigrammer.Bigrammer;
 import com.github.megallo.markoverator.poet.Poet;
-import com.github.megallo.markoverator.utils.TextUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,7 +25,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.List;
 
 /**
  * Make poems!
@@ -36,7 +34,6 @@ public class PoemGenerator {
 
     private static final Logger loggie = LoggerFactory.getLogger(PoemGenerator.class);
 
-    static TextUtils textUtils = new TextUtils(); // TODO
     Bigrammer bigrammer;
     Poet poet;
 
@@ -46,11 +43,9 @@ public class PoemGenerator {
         // example model creation is shown in MarkovGenerator
         this.bigrammer.loadModel(new FileInputStream(new File(modelFile)));
         this.bigrammer.setMaxHalfLength(6); // short and sweet
-        poet = new Poet();
+        poet = new Poet(bigrammer);
     }
 
-    // TODO I think I want a helper class that accepts a model, poem length, and line max length
-    // to do all this for you
     public static void main(String[] args) throws IOException {
         if (args.length < 1) {
             loggie.error("Nope!\n\nUsage: PoemGenerator <full path to model file>\n\n");
@@ -59,63 +54,14 @@ public class PoemGenerator {
 
         PoemGenerator pg = new PoemGenerator(args[0]);
 
-        pg.buildThreeLinePoem("alice");
-        pg.buildThreeLinePoem("anxiously");
-        pg.buildThreeLinePoem("queen");
-        pg.buildThreeLinePoem("interest");
-        pg.buildThreeLinePoem("interest");
-        pg.buildThreeLinePoem("mushroom");
-        pg.buildThreeLinePoem("conversation");
+        pg.poet.buildThreeLinePoem("alice");
+        pg.poet.buildThreeLinePoem("anxiously");
+        pg.poet.buildThreeLinePoem("queen");
+        pg.poet.buildThreeLinePoem("interest");
+        pg.poet.buildThreeLinePoem("interest");
+        pg.poet.buildThreeLinePoem("mushroom");
+        pg.poet.buildThreeLinePoem("conversation");
 
     }
 
-    public void buildThreeLinePoem(String targetWord) {
-        // first, make sure our target word is in the model. Otherwise, how do we even know what we're talking about?
-        String poemTopicWord = targetWord.toLowerCase();
-        String topicPoemLine; // bonus: keep the line and use it in the poem
-        if ((topicPoemLine = makePoemLine(bigrammer, poemTopicWord)) == null) {
-            loggie.info("I don't know about {} :/", poemTopicWord);
-            return;
-        }
-
-        loggie.info("Looking up words that rhyme with {}", poemTopicWord);
-        List<String> rhymingWords = poet.findRhymingWords(poemTopicWord); // returns a list including the target word, if we know how to rhyme it
-
-        if (rhymingWords == null) {
-            loggie.info("I don't know what rhymes with {} :(", poemTopicWord);
-            return;
-        }
-
-        loggie.debug(rhymingWords.toString());
-
-        rhymingWords.remove(poemTopicWord);
-
-        // count up to a configurable poem line count
-        int lineCount = 0;
-
-        StringBuilder poem = new StringBuilder();
-        // and now we just start trying to find words in the model
-        for (String rhyme : rhymingWords) {
-            String poemLine = makePoemLine(bigrammer, rhyme);
-            if (poemLine != null) {
-                poem.append(poemLine).append("\n");
-                if (++lineCount >= 2) { // TODO configurable, this is the number of lines in the poem plus the last line
-                    break;
-                }
-            }
-        }
-
-        poem.append(topicPoemLine); // artistically use the target rhyme word last, I guess
-
-        loggie.info("I wrote this for you!\n{}", poem);
-    }
-
-    private String makePoemLine(Bigrammer bigrammer, String word) {
-        List<String> tokens;
-        if ((tokens = bigrammer.generateRandomBackwards(word)) != null) {
-            // we found a word that is in the model
-            return textUtils.stringify(textUtils.capitalizeInitialWord(textUtils.reattachPunctuation(tokens)));
-        }
-        return null;
-    }
 }

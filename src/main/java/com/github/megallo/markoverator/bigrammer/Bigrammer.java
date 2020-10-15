@@ -30,6 +30,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -220,6 +221,15 @@ public class Bigrammer {
     }
 
     /**
+     * Pull any random word out of the model
+     * @return a word occurring in the model
+     */
+    public String getRandomWordFromModel() {
+        int wordLocation = random.nextInt(model.getFullWordList().size() - 3);
+        return model.getFullWordList().get(wordLocation);
+    }
+
+    /**
      * Get any location of the single seed word, and may or may not have DELIM adjacent to it.
      */
     @VisibleForTesting
@@ -231,6 +241,34 @@ public class Bigrammer {
             return allPossibleLocations.get(random.nextInt(allPossibleLocations.size()));
         }
         return null; // it's not in this model
+    }
+
+    /**
+     * For the given word, find all words that can come directly before it
+     * to create a starting pair of seeds
+     * @param word the word you want to end with
+     * @return all available pairs of (previous word, seed word)
+     */
+    public List<Pair> getAllPossiblePairsEndingWithWord(String word) {
+
+        List<Integer> allPossibleLocations = new ArrayList<>();
+
+        if (wordIndexMap.containsKey(word.toLowerCase())) {
+            // look up every place this word occurs
+            allPossibleLocations = wordIndexMap.get(word.toLowerCase());
+        }
+
+        // remove literally the index 0 in case the word is the first one in the corpus
+        allPossibleLocations.remove(new Integer(0)); // TODO test this
+
+        HashSet<Pair> targetWordPairs = new HashSet<>();
+        for (int location : allPossibleLocations) {
+            // grab this word and the word that comes immediately before it
+            String previousWord = model.getFullWordList().get(location - 1);
+            targetWordPairs.add(new Pair(previousWord, word));
+        }
+
+        return new ArrayList<>(targetWordPairs);
     }
 
     /**
@@ -472,7 +510,7 @@ public class Bigrammer {
     }
 
     // TODO no commas, colons, ampersands, semicolons
-    protected boolean isDecentEndingWord(List<String> sentence) {
+    public boolean isDecentEndingWord(List<String> sentence) {
         // avoid ending with a preposition, adjective, etc
         List<String> tags = posUtil.tagSentence(sentence);
 

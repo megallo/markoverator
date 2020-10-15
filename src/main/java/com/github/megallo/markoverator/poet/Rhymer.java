@@ -59,6 +59,9 @@ public class Rhymer {
     // EYNJH -> [strange, mange, arrange, prearrange, ... ]
     Map<String, List<String>> rhymeToWords = new HashMap<>();
 
+    Map<String, List<String>> wordToPhonemesWithEmphasis = new HashMap<>();
+    Map<String, Integer> wordToSyllableCount = new HashMap<>();
+
     public Rhymer() {
         this.initializeDictionaries(cmuDictLocation, cmuPhonemeLocation, cmuSymbolsLocation, myDictLocation);
     }
@@ -105,6 +108,22 @@ public class Rhymer {
         return null; // we don't have that word in the dictionary :c
     }
 
+    public boolean knownWord(String word) {
+        return wordToRhymes.containsKey(word.toLowerCase());
+    }
+
+    public List<String> getRhymingSections(String word) {
+        return wordToRhymes.get(word.toLowerCase());
+    }
+
+    public int getSyllableCount(String word) {
+        return wordToSyllableCount.getOrDefault(word, 0);
+    }
+
+    public List<String> getPhonemesWithEmphasis(String word) {
+        return wordToPhonemesWithEmphasis.get(word);
+    }
+
     private void populateCmuMap(InputStream cmuDict) throws IOException {
         try(BufferedReader reader = new BufferedReader(new InputStreamReader(cmuDict))) {
             String line;
@@ -116,12 +135,30 @@ public class Rhymer {
                     String word = split[0].toLowerCase(); // the first item on the line is the word in plaintext
 
                     List<String> phonemes = Lists.newArrayList();
+                    List<String> phonemesWithEmphasisMarkers = Lists.newArrayList();
                     // start at 1 so we skip the word and only iterate over the phonemes
                     // remove the numbers from the end of the vowel phonemes
                     // these indicate emphasis, which we might want someday, but they'd need to go in their own lookup table because they reduce rhymability
                     // K OW1 AE1 K S IY0 AH0 L ---> K OW AE K S IY AH L
                     for (int i = 1; i < split.length; i++) {
                         phonemes.add(split[i].replaceAll("\\d$", ""));
+                        phonemesWithEmphasisMarkers.add(split[i]);
+                    }
+
+                    // keep the original emphasis markers and make them available for inspection
+                    // this is a big thing to keep in memory, so
+                    // we could do this in a way that collapses down the vowel emphasis into just the numbers
+                    // collapse K OW1 AE1 K S IY0 AH0 L  --> CV1V1CCV0V0C --> 1100
+                    if (!wordToPhonemesWithEmphasis.containsKey(word)) {
+                        // we only keep the first pronunciation, sorry
+                        wordToPhonemesWithEmphasis.put(word, phonemesWithEmphasisMarkers);
+                    }
+
+                    // tally up the syllables for this word
+                    int syllables = countSyllables(phonemes);
+                    if (!wordToSyllableCount.containsKey(word)) {
+                        // we only keep the first pronunciation, sorry
+                        wordToSyllableCount.put(word, syllables);
                     }
 
                     List<String> rhymingSections = getRhymingSection(phonemes);
@@ -167,6 +204,18 @@ public class Rhymer {
                 }
             }
         }
+    }
+
+    public int countSyllables(List<String> phonemes) {
+
+        int syllableCount = 0;
+            for (String pho : phonemes) {
+                if (vowels.contains(pho)) {
+                    // we are counting vowels to count syllables, this is a hack but I think it might just work
+                    syllableCount++;
+                }
+            }
+        return syllableCount;
     }
 
     /**

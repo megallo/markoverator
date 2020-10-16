@@ -18,9 +18,11 @@ package com.github.megallo.markoverator.poet;
 
 import com.github.megallo.markoverator.bigrammer.Bigrammer;
 import com.github.megallo.markoverator.utils.TextUtils;
+import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -106,9 +108,68 @@ public class Poet {
         loggie.info("I wrote this for you!\n{}", poem);
     }
 
-    private String makePoemLine(Bigrammer bigrammer, String word) {
+    public void buildHaikuPoem(String targetWord) {
+        String endingWord3 = targetWord.toLowerCase();
+        List<String> endingWords = new ArrayList<>();
+
+        endingWords.add(endingWord3);
+        String line3 = makePoemLine(bigrammer, endingWord3, 5);
+        if (line3 == null) {
+            loggie.info("I don't know about {} :/", endingWord3);
+        }
+
+        String endingWord2 = getRandomNonRhymingWord(bigrammer, endingWords);
+        endingWords.add(endingWord2);
+        String line2 = makePoemLine(bigrammer, endingWord2, 7);
+        if (line2 == null) {
+            loggie.info("My bot brain hurts with {} - maybe ask me again?:/", endingWord3);
+        }
+
+        String endingWord1 = getRandomNonRhymingWord(bigrammer, endingWords);
+        String line1 = this.makePoemLine(bigrammer, endingWord1, 5);
+        if (line1 == null) {
+            loggie.info("I'm having some writers block with {} - maybe ask me again?:/", endingWord3);
+        }
+
+        StringBuilder poem = new StringBuilder();
+        poem.append(line1).append("\n").append(line2).append("\n").append(line3);
+
+        loggie.info("I wrote this for you!\n{}", poem);
+    }
+
+    @VisibleForTesting
+    protected String getRandomNonRhymingWord(Bigrammer bigrammer, List<String> antiRhymes) {
+        List<String> rhymingWords = new ArrayList<>();
+
+        for (String word : antiRhymes) {
+            List<String> rhymes = findRhymingWords(word);
+            if (rhymes != null) {
+                rhymingWords.addAll(rhymes);
+            }
+        }
+
+        String word  = bigrammer.getRandomWordFromModel();
+        // attempt to fund a non-rhyming word, but don't try too hard
+        for (int i = 0; i < 10 && rhymingWords.contains(word); i++) {
+            word = bigrammer.getRandomWordFromModel();
+        }
+
+        return word;
+    }
+
+    protected String makePoemLine(Bigrammer bigrammer, String word) {
         List<String> tokens;
         if ((tokens = bigrammer.generateRandomBackwards(word)) != null) {
+            // we found a word that is in the model
+            return textUtils.stringify(textUtils.capitalizeInitialWord(textUtils.reattachPunctuation(tokens)));
+        }
+        return null;
+    }
+
+    @VisibleForTesting
+    protected String makePoemLine(Bigrammer bigrammer, String word, int syllables) {
+        List<String> tokens;
+        if ((tokens = bigrammer.generateRandomBackwardsSyllables(word, syllables)) != null) {
             // we found a word that is in the model
             return textUtils.stringify(textUtils.capitalizeInitialWord(textUtils.reattachPunctuation(tokens)));
         }

@@ -36,7 +36,8 @@ public class BigrammerTest {
                 Arrays.asList("howdy", "y'all", ".", "How", "are", "ya", "?"),
                 Arrays.asList(",", "howdy", "pardner"),
                 Arrays.asList("keep", "yer", "!", "boots", "on"),
-                Arrays.asList(".", "I", "reckon")
+                Arrays.asList(".", "I", "reckon"),
+                Arrays.asList("who", "poisoned", "the", "water", "hole")
         ));
         bigrammer = new Bigrammer(model);
     }
@@ -147,6 +148,25 @@ public class BigrammerTest {
     }
 
     @Test
+    public void testBackwardsSentenceGenerationSyllables() {
+        List<String> expected = Lists.newArrayList("hole");
+        List<String> generated = bigrammer.generateRandomBackwardsSyllables("hole", 1);
+        Assert.assertEquals(expected, generated);
+
+        expected = Lists.newArrayList("water", "hole");
+        generated = bigrammer.generateRandomBackwardsSyllables("hole", 2);
+        Assert.assertEquals(expected, generated);
+
+        expected = Lists.newArrayList("water");
+        generated = bigrammer.generateRandomBackwardsSyllables("water", 2);
+        Assert.assertEquals(expected, generated);
+
+        expected = Lists.newArrayList("poisoned", "the", "water");
+        generated = bigrammer.generateRandomBackwardsSyllables("water", 5);
+        Assert.assertEquals(expected, generated);
+    }
+
+    @Test
     public void testForwardGeneration() {
         List<String> expected = Lists.newArrayList("How", "are", "ya", "?");
         List<String> forward = bigrammer.generateForwardText("How", "are");
@@ -223,6 +243,37 @@ public class BigrammerTest {
 
         expected = Lists.newArrayList("howdy", "y'all", ".", "How", "are");
         back = bigrammer.generateBackwardText("How", "are", 5, 5);
+        Assert.assertEquals(expected, back);
+    }
+
+    @Test
+    public void testBackwardsGenerationSyllables() {
+        List<String> expected = Lists.newArrayList("water", "hole");
+        List<String> back = bigrammer.generateBackwardSyllables("water", "hole", 1);
+        Assert.assertEquals(expected, back);
+
+        expected = Lists.newArrayList("water", "hole");
+        back = bigrammer.generateBackwardSyllables("water", "hole", 3);
+        Assert.assertEquals(expected, back);
+
+        expected = Lists.newArrayList("the", "water", "hole");
+        back = bigrammer.generateBackwardSyllables("water", "hole", 4);
+        Assert.assertEquals(expected, back);
+
+        expected = Lists.newArrayList("poisoned", "the", "water", "hole");
+        back = bigrammer.generateBackwardSyllables("water", "hole", 5);
+        Assert.assertEquals(expected, back);
+
+        expected = Lists.newArrayList("poisoned", "the", "water", "hole");
+        back = bigrammer.generateBackwardSyllables("water", "hole", 6);
+        Assert.assertEquals(expected, back);
+
+        expected = Lists.newArrayList("who", "poisoned", "the", "water", "hole");
+        back = bigrammer.generateBackwardSyllables("water", "hole", 7);
+        Assert.assertEquals(expected, back);
+
+        expected = Lists.newArrayList("who", "poisoned", "the", "water", "hole");
+        back = bigrammer.generateBackwardSyllables("water", "hole", 8);
         Assert.assertEquals(expected, back);
     }
 

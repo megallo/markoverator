@@ -19,6 +19,7 @@ package com.github.megallo.markoverator.bigrammer;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
+import com.github.megallo.markoverator.poet.Rhymer;
 import com.github.megallo.markoverator.utils.Pair;
 import com.github.megallo.markoverator.utils.PartOfSpeechUtils;
 import com.google.common.annotations.VisibleForTesting;
@@ -221,6 +222,46 @@ public class Bigrammer {
     }
 
     /**
+     * Attempts to find the exact word you're looking for,
+     * and generate a sentence of {n} syllables ending with that word.
+     * Useful if you're trying to make poetry.
+     *
+     * If the seedword has more syllables than the requested number,
+     * this methods returns just that word alone.
+     *
+     * @return null if seed word is not in model, or an empty list if we found it but couldn't meet the min reqs. Try again?
+     */
+    public List<String> generateRandomBackwardsSyllables(String seedWord, int syllableCount) {
+        if (model == null) {
+            throw new RuntimeException("No model generated or loaded");
+        }
+
+        Integer chosenRandomLocation = getAnyLocationOfSeed(seedWord);
+
+        if (chosenRandomLocation != null) {
+
+            Rhymer rhymer = new Rhymer();
+            int syllablesSoFar = rhymer.getSyllableCount(seedWord);
+
+            // only return the seed word if it already has the right number of syllables
+            if (syllablesSoFar >= syllableCount) {
+                List<String> singleWordList = new ArrayList<>();
+                singleWordList.add(seedWord);
+                return singleWordList;
+            }
+
+            // now take that word plus the word immediately before it and start bigrammin'
+            String wordBeforeSeed = model.getFullWordList().get(chosenRandomLocation - 1);
+
+            List<String> backwardText = generateBackwardSyllables(wordBeforeSeed, seedWord, syllableCount);
+            backwardText.removeAll(Lists.newArrayList(DELIM));
+            return backwardText;
+        }
+
+        return null;
+    }
+
+    /**
      * Pull any random word out of the model
      * @return a word occurring in the model
      */
@@ -395,6 +436,78 @@ public class Bigrammer {
 
         return Lists.reverse(generated);
     }
+
+
+    /**
+     * Generates a sequence seeded with the final 2 words, approximately {n} syllables in length.
+     * The total syllables may be slightly more or less than requested.
+     *
+     * @param word2 second to last word
+     * @param word3 last word
+     * @param syllableCount number of syllables to target
+     * @return sentence of {n} syllables ending with seed words
+     */
+    @VisibleForTesting
+    List<String> generateBackwardSyllables(String word2, String word3, int syllableCount) {
+        Stack<String> generated = new Stack<>();
+        Rhymer rhymer = new Rhymer();
+
+        int word2Syllables = rhymer.getSyllableCount(word2);
+        int word3Syllables = rhymer.getSyllableCount(word3);
+        int syllablesSoFar = rhymer.getSyllableCount(word2) + rhymer.getSyllableCount(word3);
+
+        // handle edge cases
+        if (syllablesSoFar >= syllableCount || word2.equals(DELIM)) {
+            generated.push(word2);
+            generated.push(word3);
+            return generated;
+        }
+
+        generated.push(word3);
+        generated.push(word2);
+
+        while (syllablesSoFar < syllableCount) {
+            List<String> prevWordOptions = model.getBackwardCache().get(new Pair(word2, word3));
+            if (prevWordOptions == null) {
+                // we have exhausted our options but we didn't meet the minimum size requirement
+                // but let the calling method decide if it is the right length or not
+                return generated;
+            }
+
+            int syllablesLeft = syllableCount - syllablesSoFar;
+            String word1 = prevWordOptions.get(random.nextInt(prevWordOptions.size()));
+            int word1SyllableCount = rhymer.getSyllableCount(word1);
+
+            // attempt to not go *over* the number of syllables, but don't try too hard
+            for (int i = 0; i < 10 && word1SyllableCount > syllablesLeft; i++) {
+                word1 = prevWordOptions.get(random.nextInt(prevWordOptions.size()));
+                word1SyllableCount = rhymer.getSyllableCount(word1);
+            }
+
+            syllablesSoFar += word1SyllableCount;
+            generated.push(word1);
+
+            if (checkBeginCondition(generated)) {
+                break;
+            }
+
+            word3 = word2;
+            word2 = word1;
+        }
+
+        // remove any leading punctuation from the beginning
+        if (generated.peek().equals(DELIM)) {
+            generated.pop();
+        }
+
+        Matcher m = BAD_BEGINNING_PUNCTUATION_REGEX.matcher(generated.peek());
+        if (m.matches()) {
+            generated.pop();
+        }
+
+        return Lists.reverse(generated);
+    }
+
 
     /**
      * This method will be removed in a future release. Use BigramModelBuilder.buildModel() instead.

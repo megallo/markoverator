@@ -56,76 +56,89 @@ ext {
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Identifiers
-
-group = project_group
-version = project_version
-ext.isReleaseVersion = !version.endsWith("SNAPSHOT")
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Plugins
 
-apply plugin: 'java'
-sourceCompatibility = project_jdk
-targetCompatibility = project_jdk
+allprojects {
+    apply plugin: 'idea'
 
-apply plugin: 'idea'
-apply plugin: 'maven'
-apply plugin: 'signing'
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Dependencies
-
-repositories {
-    mavenCentral()
+    group = project_group
+    version = project_version
+    ext.isReleaseVersion = !version.endsWith("SNAPSHOT")
 }
 
-dependencies {
-    compile 'com.esotericsoftware.kryo:kryo:2.24.0'
-    compile 'com.github.rholder.nlp:fast-tag-core:0.1.0'
-    compile 'com.github.rholder.nlp:fast-tag-lexicon:0.1.0'
-    compile 'com.google.guava:guava:18.0'
-    // TODO make this a multi-module project so I can have logging for the example main() classes without horking consumers
-    compile "org.slf4j:slf4j-api:1.7.5"
-    // junit testing
-    testCompile "org.slf4j:slf4j-simple:1.7.5"
-    testCompile "junit:junit:4.11"
-    testCompile "org.mockito:mockito-all:1.10.19"
-    testCompile 'org.codehaus.jsr166-mirror:jsr166:1.7.0'
-}
+subprojects {
+    apply plugin: 'java'
+    apply plugin: 'maven'
+    apply plugin: 'signing'
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Artifacts
+    sourceCompatibility = project_jdk
+    targetCompatibility = project_jdk
 
-jar {
-    doFirst {
-        // Timestamp changes on every build. By evaluating it later, won't needlessly fail up-to-date checks.
-        manifest = defaultManifest()
+    repositories { 
+        mavenCentral()
     }
-}
 
-task javadocJar(type: Jar, dependsOn: javadoc) {
-    classifier = 'javadoc'
-    from 'build/docs/javadoc'
-    doFirst {
-        // Timestamp changes on every build. By evaluating it later, won't needlessly fail up-to-date checks.
-        manifest = defaultManifest()
+    jar {
+        doFirst {
+            // Timestamp changes on every build. By evaluating it later, won't needlessly fail up-to-date checks.
+            manifest = defaultManifest()
+        }
     }
-}
 
-task sourcesJar(type: Jar) {
-    classifier = 'sources'
-    from sourceSets.main.allSource
-    doFirst {
-        // Timestamp changes on every build. By evaluating it later, won't needlessly fail up-to-date checks.
-        manifest = defaultManifest()
+    task javadocJar(type: Jar, dependsOn: javadoc) {
+        classifier = 'javadoc'
+        from 'build/docs/javadoc'
+        doFirst {
+            // Timestamp changes on every build. By evaluating it later, won't needlessly fail up-to-date checks.
+            manifest = defaultManifest()
+        }
     }
-}
 
-artifacts {
-    archives jar
-    archives javadocJar
-    archives sourcesJar
+    task sourcesJar(type: Jar) {
+        classifier = 'sources'
+        from sourceSets.main.allSource
+        doFirst {
+            // Timestamp changes on every build. By evaluating it later, won't needlessly fail up-to-date checks.
+            manifest = defaultManifest()
+        }
+    }
+
+    artifacts {
+        archives jar
+        archives javadocJar
+        archives sourcesJar
+    }
+
+    if(isReleaseVersion && gradle.startParameter.taskNames.contains("uploadArchives")) {
+        signing {
+            sign configurations.archives
+        }
+    } else {
+        task signArchives {
+            // do nothing
+        }
+    }
+
+    uploadArchives {
+        repositories {
+            if (gradle.startParameter.taskNames.contains("uploadArchives")) {
+                mavenDeployer {
+                    beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+
+                    // for snapshots https://oss.sonatype.org/content/repositories/snapshots
+                    // for staging/release https://oss.sonatype.org/service/local/staging/deploy/maven2
+                    repository(
+                            url: 'https://oss.sonatype.org/service/local/staging/deploy/maven2/'
+                    ) {
+                        promptPasswords()
+                        authentication(userName: sonatypeUsername, password: sonatypePassword)
+                    }
+
+                    pom.project project_pom
+                }
+            }
+        }
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -153,37 +166,6 @@ def promptPasswords() {
     allprojects { ext."signing.password" = signingKeyPassword }
     allprojects { ext."sonatypePassword" = sonatypeOssPassword }
 
-}
-
-if(isReleaseVersion && gradle.startParameter.taskNames.contains("uploadArchives")) {
-    signing {
-        sign configurations.archives
-    }
-} else {
-    task signArchives {
-        // do nothing
-    }
-}
-
-uploadArchives {
-    repositories {
-        if (gradle.startParameter.taskNames.contains("uploadArchives")) {
-            mavenDeployer {
-                beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
-
-                // for snapshots https://oss.sonatype.org/content/repositories/snapshots
-                // for staging/release https://oss.sonatype.org/service/local/staging/deploy/maven2
-                repository(
-                        url: 'https://oss.sonatype.org/service/local/staging/deploy/maven2/'
-                ) {
-                    promptPasswords()
-                    authentication(userName: sonatypeUsername, password: sonatypePassword)
-                }
-
-                pom.project project_pom
-            }
-        }
-    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

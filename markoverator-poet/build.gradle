@@ -1,0 +1,9 @@
+dependencies {
+    compile project(':markoverator-core')
+
+    // junit testing
+    testCompile "org.slf4j:slf4j-simple:1.7.5"
+    testCompile "junit:junit:4.11"
+    testCompile "org.mockito:mockito-all:1.10.19"
+    testCompile 'org.codehaus.jsr166-mirror:jsr166:1.7.0'
+}

@@ -1,6 +1,6 @@
 package com.github.megallo.markoverator.poet;
 
-import com.google.common.collect.Lists;
+import com.github.megallo.markoverator.utils.Lists;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;

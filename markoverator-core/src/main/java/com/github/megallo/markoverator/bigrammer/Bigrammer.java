@@ -19,10 +19,10 @@ package com.github.megallo.markoverator.bigrammer;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
+import com.github.megallo.markoverator.annotations.VisibleForTesting;
+import com.github.megallo.markoverator.utils.Lists;
 import com.github.megallo.markoverator.utils.Pair;
 import com.github.megallo.markoverator.utils.PartOfSpeechUtils;
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

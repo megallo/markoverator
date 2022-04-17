@@ -16,8 +16,8 @@
 
 package com.github.megallo.markoverator.poet;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Lists;
+import com.github.megallo.markoverator.annotations.VisibleForTesting;
+import com.github.megallo.markoverator.utils.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

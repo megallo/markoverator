@@ -16,7 +16,6 @@
 
 package com.github.megallo.markoverator.poet;
 
-import com.github.megallo.markoverator.PoemGenerator;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import org.slf4j.Logger;
@@ -43,7 +42,7 @@ import java.util.Stack;
  **/
 public class Poet {
 
-    private static final Logger loggie = LoggerFactory.getLogger(PoemGenerator.class);
+    private static final Logger loggie = LoggerFactory.getLogger(Poet.class);
 
     public static final String cmuDictLocation = "/com/github/megallo/markoverator/poet/cmudict-0.7b.txt";
     public static final String cmuPhonemeLocation = "/com/github/megallo/markoverator/poet/cmudict-0.7b-phones.txt";

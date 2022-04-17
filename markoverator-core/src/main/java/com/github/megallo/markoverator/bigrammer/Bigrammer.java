@@ -56,16 +56,11 @@ public class Bigrammer {
 
     private PartOfSpeechUtils posUtil = new PartOfSpeechUtils();
 
-    public Bigrammer() { }
-
     public Bigrammer(BigramModel model) {
-        this.setModel(model);
-    }
+        this.model = model;
+        calculateWordIndices();
 
-    @Deprecated
-    // I thought this would be way more useful ¯\_(ツ)_/¯
-    public Bigrammer(int maxHalfLength) {
-        this.maxHalfLength = maxHalfLength;
+        loggie.info("Loaded model; found {} words", model.getFullWordList().size());
     }
 
     public int getMaxHalfLength() {
@@ -78,22 +73,6 @@ public class Bigrammer {
 
     public BigramModel getModel() {
         return model;
-    }
-
-    /**
-     * Call me first!
-     *
-     * Use this to set the model used by Bigrammer. Call this before attempting to generate.
-     *
-     * This replaces Bigrammer.loadModel(), which is deprecated and scheduled for removal.
-     *
-     * @param model A fully deserialized model
-     */
-    public void setModel(BigramModel model) {
-        this.model = model;
-        calculateWordIndices();
-
-        loggie.info("Loaded model; found {} words", model.getFullWordList().size());
     }
 
     /**

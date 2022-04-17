@@ -16,6 +16,8 @@
 
 package com.github.megallo.markoverator;
 
+import com.github.megallo.markoverator.bigrammer.BigramModel;
+import com.github.megallo.markoverator.bigrammer.BigramModelBuilder;
 import com.github.megallo.markoverator.bigrammer.Bigrammer;
 import com.github.megallo.markoverator.poet.Poet;
 import com.github.megallo.markoverator.utils.TextUtils;
@@ -41,10 +43,10 @@ public class PoemGenerator {
     Poet poet;
 
     PoemGenerator(String modelFile) throws FileNotFoundException {
-        this.bigrammer = new Bigrammer();
         // load an existing model from a file
         // example model creation is shown in MarkovGenerator
-        this.bigrammer.loadModel(new FileInputStream(new File(modelFile)));
+        BigramModel model = BigramModelBuilder.loadModel(new FileInputStream(new File(modelFile)));
+        this.bigrammer = new Bigrammer(model);
         this.bigrammer.setMaxHalfLength(6); // short and sweet
         poet = new Poet();
     }

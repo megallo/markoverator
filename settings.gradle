@@ -1,2 +1,4 @@
-
 rootProject.name = 'markoverator'
+include 'markoverator-core',
+        'markoverator-examples',
+        'markoverator-poet'

@@ -17,6 +17,7 @@
 package com.github.megallo.markoverator.bigrammer;
 
 import com.github.megallo.markoverator.annotations.VisibleForTesting;
+import com.github.megallo.markoverator.storage.BigrammerStorage;
 import com.github.megallo.markoverator.utils.Lists;
 import com.github.megallo.markoverator.utils.Pair;
 import com.github.megallo.markoverator.utils.PartOfSpeechUtils;
@@ -24,9 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 import java.util.Stack;
 import java.util.regex.Matcher;
@@ -51,16 +50,17 @@ public class Bigrammer {
     private Pattern BAD_BEGINNING_PUNCTUATION_REGEX = Pattern.compile("[\\.!\\?,;]+");
     private Pattern GOOD_ENDING_PUNCTUATION_REGEX = Pattern.compile("[\\.!\\?]+");
 
-    private BigramModel model = null;
-    private Map<String, List<Integer>> wordIndexMap; // calculated, so not part of the model object
+    private final BigrammerStorage storage;
 
     private PartOfSpeechUtils posUtil = new PartOfSpeechUtils();
 
-    public Bigrammer(BigramModel model) {
-        this.model = model;
-        calculateWordIndices();
+    public Bigrammer(BigrammerStorage storage) {
+        if (storage == null) {
+            throw new RuntimeException("No model generated or loaded");
+        }
+        this.storage = storage;
 
-        loggie.info("Loaded model; found {} words", model.getFullWordList().size());
+        loggie.info("Loaded model; found {} words", storage.getFullWordListSize());
     }
 
     public int getMaxHalfLength() {
@@ -71,26 +71,18 @@ public class Bigrammer {
         this.maxHalfLength = maxHalfLength;
     }
 
-    public BigramModel getModel() {
-        return model;
-    }
-
     /**
      * Generate a random sentence.
      */
     public List<String> generateRandom() {
-        if (model == null) {
-            throw new RuntimeException("No model generated or loaded");
-        }
-
         int seed;
         String word1;
         String word2;
         do {
             // if you start too close to the end, you'll fall off it
-            seed = random.nextInt(model.getFullWordList().size() - 3);
-            word1 = model.getFullWordList().get(seed);
-            word2 = model.getFullWordList().get(seed + 1);
+            seed = random.nextInt(storage.getFullWordListSize() - 3);
+            word1 = storage.getByIndex(seed);
+            word2 = storage.getByIndex(seed + 1);
 
             // keep trying until we get an optimal starting point
         } while (word1.equals(DELIM) || word2.equals(DELIM));
@@ -104,15 +96,11 @@ public class Bigrammer {
      * @return null if exact string is not found
      */
     public List<String> generateRandom(String seedWord) {
-        if (model == null) {
-            throw new RuntimeException("No model generated or loaded");
-        }
-
         Integer chosenRandomLocation = getAnyLocationOfSeed(seedWord);
 
         if (chosenRandomLocation != null) {
             // now take that word plus the word immediately following it and start bigrammin'
-            String wordFollowingSeed = model.getFullWordList().get(chosenRandomLocation + 1);
+            String wordFollowingSeed = storage.getByIndex(chosenRandomLocation + 1);
 
             return generatePhraseWithKnownPair(seedWord, wordFollowingSeed);
         }
@@ -129,15 +117,11 @@ public class Bigrammer {
      * @return null if exact string is not found
      */
     public List<String> generateRandomForwards(String seedWord) {
-        if (model == null) {
-            throw new RuntimeException("No model generated or loaded");
-        }
-
         Integer chosenRandomLocation = getAnyLocationOfSeed(seedWord);
 
         if (chosenRandomLocation != null) {
             // now take that word plus the word immediately following it and start bigrammin'
-            String wordFollowingSeed = model.getFullWordList().get(chosenRandomLocation + 1);
+            String wordFollowingSeed = storage.getByIndex(chosenRandomLocation + 1);
 
             List<String> forwardText = generateForwardText(seedWord, wordFollowingSeed);
             forwardText.removeAll(Lists.newArrayList(DELIM));
@@ -166,15 +150,11 @@ public class Bigrammer {
      * @return null if seed word is not in model, or an empty list if we found it but couldn't meet the min reqs. Try again?
      */
     public List<String> generateRandomBackwards(String seedWord, int minWordCount, int maxWordCount) {
-        if (model == null) {
-            throw new RuntimeException("No model generated or loaded");
-        }
-
         Integer chosenRandomLocation = getAnyLocationOfSeed(seedWord);
 
         if (chosenRandomLocation != null) {
             // now take that word plus the word immediately before it and start bigrammin'
-            String wordBeforeSeed = model.getFullWordList().get(chosenRandomLocation - 1);
+            String wordBeforeSeed = storage.getByIndex(chosenRandomLocation - 1);
 
             List<String> backwardText = generateBackwardText(wordBeforeSeed, seedWord, minWordCount, maxWordCount);
 
@@ -198,10 +178,9 @@ public class Bigrammer {
      */
     @VisibleForTesting
     Integer getAnyLocationOfSeed(String seedWord) {
-
-        if (wordIndexMap.containsKey(seedWord)) {
-            // look up every place this word occurs and pick a random location
-            List<Integer> allPossibleLocations = wordIndexMap.get(seedWord);
+         // look up every place this word occurs and pick a random location
+        List<Integer> allPossibleLocations = storage.getAllPossibleLocations(seedWord);
+        if (allPossibleLocations != null) {
             return allPossibleLocations.get(random.nextInt(allPossibleLocations.size()));
         }
         return null; // it's not in this model
@@ -213,11 +192,7 @@ public class Bigrammer {
      * @return null if those exact words don't occur together
      */
     public List<String> generateRandom(String seedWord1, String seedWord2) {
-        if (model == null) {
-            throw new RuntimeException("No model generated or loaded");
-        }
-
-        if (model.getForwardCache().containsKey(new Pair(seedWord1, seedWord2))) {
+        if (storage.containsForwardWordList(new Pair(seedWord1, seedWord2))) {
             return generatePhraseWithKnownPair(seedWord1, seedWord2);
         }
 
@@ -249,7 +224,7 @@ public class Bigrammer {
         // loops until we reach a size we like, or the content reaches a good stopping point
         while (generated.size() <= maxHalfLength) {
 
-            List<String> nextWordOptions = model.getForwardCache().get(new Pair(word1, word2));
+            List<String> nextWordOptions = storage.getForwardWordList(new Pair(word1, word2));
 
             if (nextWordOptions == null) {
                 break;
@@ -301,7 +276,7 @@ public class Bigrammer {
         generated.push(word2);
 
         while (generated.size() <= minWordCount || generated.size() < maxWordCount) {
-            List<String> prevWordOptions = model.getBackwardCache().get(new Pair(word2, word3));
+            List<String> prevWordOptions = storage.getBackwardWordList(new Pair(word2, word3));
             if (prevWordOptions == null) {
                 // we have exhausted our options but we didn't meet the minimum size requirement
                 // but let the calling method decide if it is the right length or not
@@ -330,20 +305,6 @@ public class Bigrammer {
         }
 
         return Lists.reverse(generated);
-    }
-
-    private void calculateWordIndices() {
-        wordIndexMap = new HashMap<>();
-
-        // make a list of the indices at which a given word appears
-        for (int i = 0; i < model.getFullWordList().size(); i++) {
-            String word = model.getFullWordList().get(i);
-            if (!wordIndexMap.containsKey(word)) {
-                wordIndexMap.put(word, new ArrayList<Integer>());
-            }
-            wordIndexMap.get(word).add(i);
-            // DELIM could be removed here if space is a concern
-        }
     }
 
     /**

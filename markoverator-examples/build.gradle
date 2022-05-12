@@ -1,5 +1,7 @@
 dependencies {
     compile project(':markoverator-core')
+    compile project(':markoverator-kryo')
+    compile project(':markoverator-h2')
     compile project(':markoverator-poet')
 
     compile "org.slf4j:slf4j-simple:1.7.5"

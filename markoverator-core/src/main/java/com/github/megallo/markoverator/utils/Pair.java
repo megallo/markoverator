@@ -1,9 +1,11 @@
 package com.github.megallo.markoverator.utils;
 
+import java.io.Serializable;
+
 /**
  * Serializable pojo
- **/
-public class Pair {
+ */
+public class Pair implements Serializable {
 
     private String first;
     private String second;

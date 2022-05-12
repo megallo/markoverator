@@ -19,6 +19,8 @@ package com.github.megallo.markoverator;
 import com.github.megallo.markoverator.bigrammer.BigramModel;
 import com.github.megallo.markoverator.bigrammer.BigramModelBuilder;
 import com.github.megallo.markoverator.bigrammer.Bigrammer;
+import com.github.megallo.markoverator.kryo.utils.KryoModelUtils;
+import com.github.megallo.markoverator.storage.MemoryBigrammerStorage;
 import com.github.megallo.markoverator.utils.TextUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,10 +67,10 @@ public class MarkovGenerator {
         or you can load up a model that you created previously. Use the method that's right for you!
          */
 
-        BigramModel model = mg.buildAndSaveModel(args[0], args[1]);
-//        BigramModel model = mg.loadModelFromFile(args[1]);
+        //BigramModel model = mg.buildAndSaveModel(args[0], args[1]);
+        BigramModel model = mg.loadModelFromFile(args[1]);
 
-        Bigrammer bigrams = new Bigrammer(model);
+        Bigrammer bigrams = new Bigrammer(new MemoryBigrammerStorage(model));
 
         // generate totally random sentences
         for (int i = 0; i < 10; i++) {
@@ -116,7 +118,7 @@ public class MarkovGenerator {
 
         // save the model to a file (not required in order to use it to generate random with the Bigrammer)
         try {
-            BigramModelBuilder.saveModel(model, new FileOutputStream(new File(modelFilePath)));
+            KryoModelUtils.saveModel(model, new FileOutputStream(new File(modelFilePath)));
         } catch (FileNotFoundException e) {
             throw new RuntimeException("Couldn't write model to file " + modelFilePath, e);
         }
@@ -134,7 +136,7 @@ public class MarkovGenerator {
     public BigramModel loadModelFromFile(String modelFilePath) {
         BigramModel model;
         try {
-            model = BigramModelBuilder.loadModel(new FileInputStream(new File(modelFilePath)));
+            model = KryoModelUtils.loadModel(new FileInputStream(new File(modelFilePath)));
         } catch (FileNotFoundException e) {
             throw new RuntimeException("Couldn't find model file at " + modelFilePath, e);
         }

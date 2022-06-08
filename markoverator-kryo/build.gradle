@@ -1,0 +1,5 @@
+dependencies {
+    compile project(':markoverator-core')
+
+    compile 'com.esotericsoftware.kryo:kryo:2.24.0'
+}

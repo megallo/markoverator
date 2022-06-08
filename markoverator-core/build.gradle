@@ -1,5 +1,4 @@
 dependencies {
-    compile 'com.esotericsoftware.kryo:kryo:2.24.0'
     compile 'com.github.rholder.nlp:fast-tag-core:0.1.0'
     compile 'com.github.rholder.nlp:fast-tag-lexicon:0.1.0'
     compile "org.slf4j:slf4j-api:1.7.5"

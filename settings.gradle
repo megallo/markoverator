@@ -1,4 +1,6 @@
 rootProject.name = 'markoverator'
 include 'markoverator-core',
         'markoverator-examples',
+        'markoverator-h2',
+        'markoverator-kryo',
         'markoverator-poet'

@@ -1,0 +1,5 @@
+dependencies {
+    compile project(':markoverator-core')
+
+    compile 'com.h2database:h2:2.1.212'
+}

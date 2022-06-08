@@ -16,6 +16,7 @@
 
 package com.github.megallo.markoverator.bigrammer;
 
+import com.github.megallo.markoverator.storage.MemoryBigrammerStorage;
 import com.github.megallo.markoverator.utils.Lists;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -28,7 +29,7 @@ import static com.github.megallo.markoverator.bigrammer.Bigrammer.DELIM;
 
 public class BigrammerTest {
 
-    static Bigrammer bigrammer;
+    private static Bigrammer bigrammer;
 
     @BeforeClass
     public static void setup() {
@@ -38,7 +39,7 @@ public class BigrammerTest {
                 Arrays.asList("keep", "yer", "!", "boots", "on"),
                 Arrays.asList(".", "I", "reckon")
         ));
-        bigrammer = new Bigrammer(model);
+        bigrammer = new Bigrammer(new MemoryBigrammerStorage(model));
     }
 
     @Test
